@@ -46,6 +46,12 @@ cpr::Response fetchMessages() {
 }
 
 
+cpr::Response fetchImage( std::string url) {
+    return cpr::Get(cpr::Url{"https://i.redd.it/xi16okzxbdn81.jpg"},
+                                           cpr::VerifySsl(0),
+                                           cpr::UserAgent(USER_AGENT));
+}
+
 
 cpr::Response fetchToken() {
     cpr::Response access_query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},

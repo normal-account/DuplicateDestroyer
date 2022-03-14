@@ -15,3 +15,5 @@ void setToken(std::string newToken);
 void refresh_token();
 
 cpr::Response fetchMessages();
+
+cpr::Response fetchImage( std::string url);

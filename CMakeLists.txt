@@ -6,10 +6,16 @@ FetchContent_MakeAvailable(cpr)
 cmake_minimum_required(VERSION 3.17)
 project(DuplicateDestroyer)
 
-set(CMAKE_CXX_STANDARD 20)
+find_package( OpenCV REQUIRED ) # of course, OpenCV needs to be installed on the system
 
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+
+set(CMAKE_CXX_STANDARD 20)
 
 add_executable(DuplicateDestroyer main.cpp api.cpp entities.cpp)
 
-target_link_libraries(DuplicateDestroyer PRIVATE cpr::cpr)
+SET(OpenCV_LIBS opencv_core opencv_highgui opencv_imgproc) # linker errors without this line
+
+target_link_libraries(DuplicateDestroyer cpr::cpr ${OpenCV_LIBS})
+
 
