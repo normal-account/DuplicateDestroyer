@@ -19,3 +19,15 @@ void Submission::operator<<( json data )
     else
         url = data[ "url" ];
 }
+
+void Message::operator<<( json data ) {
+    if (data["kind"] == "t1") // "kind" returns type, e.g. "T1" or "T4"
+        isReply = true;
+    else
+    {
+        isReply = false;
+        author = data[ "data" ][ "author" ];
+        subject = data[ "data" ][ "subject" ];
+        body = data[ "data" ][ "body" ];
+    }
+}

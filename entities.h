@@ -1,17 +1,19 @@
 
 #include "single_include/nlohmann/json.hpp"
+#include <iostream>
+using namespace std;
 
 using json = nlohmann::json;
 
 class Submission
 {
 public:
-   std::string author;
-   std::string title;
-   std::string shortlink;
-   std::string fullname;
+   string author;
+   string title;
+   string shortlink;
+   string fullname;
    bool isVideo;
-   std::string url;
+   string url;
    int score;
 
    void operator<<( json data );
@@ -20,7 +22,12 @@ public:
 class Message
 {
 public:
+   bool isReply; // a message is either a reply or a private message
+   string subject;
+   string body;
+   string author;
 
+   void operator<<( json data );
 };
 
 

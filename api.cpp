@@ -38,9 +38,9 @@ cpr::Response fetchSubmissions() {
 
 
 cpr::Response fetchMessages() {
-    return cpr::Get(cpr::Url{"https://oauth.reddit.com/messages/unread"},
+    return cpr::Get(cpr::Url{"https://oauth.reddit.com/message/inbox"}, // TODO: change to unread
                     cpr::Header{{"Authorization", token}},
-                    cpr::Parameters{{"mark", "true"}, {"limit", "1"}},
+                    cpr::Parameters{{"mark", "true"}, {"limit", "2"}},
                     cpr::VerifySsl(0),
                     cpr::UserAgent(USER_AGENT));
 }
