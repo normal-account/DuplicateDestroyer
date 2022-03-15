@@ -12,10 +12,10 @@ include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(DuplicateDestroyer main.cpp api.cpp entities.cpp)
+add_executable(DuplicateDestroyer src/main.cpp src/api_wrapper.cpp src/reddit_entities.cpp src/image_manipulation.cpp)
 
 SET(OpenCV_LIBS opencv_core opencv_highgui opencv_imgproc) # linker errors without this line
 
-target_link_libraries(DuplicateDestroyer cpr::cpr ${OpenCV_LIBS})
+target_link_libraries(DuplicateDestroyer cpr::cpr ${OpenCV_LIBS} gmpxx gmp)
 
 

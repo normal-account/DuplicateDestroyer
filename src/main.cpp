@@ -1,9 +1,7 @@
-#include "api.h"
-#include "entities.h"
-#include <opencv2/opencv.hpp>
-
-using namespace cv;
-#define IMAGE_NAME "image_in_process"
+#include "api_wrapper.h"
+#include "reddit_entities.h"
+#include "image_manipulation.h"
+#include <gmp.h>
 
 // Should be done only once the original token expires.
 void initializeToken()
@@ -27,6 +25,8 @@ bool downloadImage(string url) {
     return false;
 }
 
+
+
 // TODO : Set up DB lib
 // TODO : Set up algorithm to create hash
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
@@ -34,16 +34,13 @@ int main()
 {
     initializeToken();
 
-    Mat image;
-    image = imread( "test.jpg", 1 );
-    if ( !image.data )
-    {
-        printf("No image data \n");
-        return -1;
-    }
-    namedWindow("Display Image", WINDOW_AUTOSIZE );
-    imshow("Display Image", image);
-    waitKey(0);
+
+
+
+    Image image;
+    image.matrix = imread("test.jpg");
+
+    image.hash10x10();
     exit(0);
 
     /* <-- SUBMISSIONS --> */

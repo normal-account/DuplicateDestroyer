@@ -2,7 +2,7 @@
 // Created by carle on 3/14/22.
 //
 
-#include "entities.h"
+#include "reddit_entities.h"
 
 void Submission::operator<<( json data )
 {
