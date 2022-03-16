@@ -1,7 +1,6 @@
 #include "api_wrapper.h"
 #include "reddit_entities.h"
 #include "image_manipulation.h"
-#include <gmp.h>
 
 // Should be done only once the original token expires.
 void initializeToken()
@@ -28,20 +27,13 @@ bool downloadImage(string url) {
 
 
 // TODO : Set up DB lib
-// TODO : Set up algorithm to create hash
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
 int main()
 {
     initializeToken();
 
-
-
-
-    Image image;
-    image.matrix = imread("test.jpg");
-
-    image.hash10x10();
-    exit(0);
+    /*Image image;
+    image.matrix = imread("test.jpg");*/
 
     /* <-- SUBMISSIONS --> */
 

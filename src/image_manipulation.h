@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <gmpxx.h>
 
 #define IMAGE_NAME "image_in_process"
 
@@ -13,6 +14,6 @@ class Image {
 public:
    Mat matrix;
 
-   string hash10x10();
-   string hash8x8();
+   mpz_class hash10x10();
+   mpz_class hash8x8();
 };
