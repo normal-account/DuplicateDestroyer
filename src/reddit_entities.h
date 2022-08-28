@@ -1,6 +1,7 @@
 
 #include "../single_include/nlohmann/json.hpp"
 #include <iostream>
+#include <optional>
 using namespace std;
 
 using json = nlohmann::json;
@@ -13,8 +14,10 @@ public:
    string shortlink;
    string fullname;
    bool isVideo;
+   bool isGallery;
    string url;
    int score;
+   optional<vector<string>> galleryUrls;
 
    void operator<<( json data );
 };

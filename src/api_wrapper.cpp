@@ -29,7 +29,7 @@ void unsave_submission()
 }
 
 cpr::Response fetchSubmissions() {
-    return cpr::Get(cpr::Url{"https://oauth.reddit.com/r/abruptchaos/new"},
+    return cpr::Get(cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/new"},
                                         cpr::Header{{"Authorization", token}},
                                         cpr::Parameters{{"g", "GLOBAL"}, {"limit", "1"}},
                                         cpr::VerifySsl(0),
