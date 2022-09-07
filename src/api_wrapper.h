@@ -4,16 +4,21 @@
 #include <cpr/cpr.h>
 
 #define USER_AGENT "DuplicateDestroyer 1.2v C++"
+#define IMAGE_NAME "image_in_process"
 
 
-cpr::Response fetchSubmissions();
+void send_message(const std::string &user, const std::string &content, const std::string& subject);
 
-cpr::Response fetchToken();
+void remove_submission(const std::string& id);
 
-void setToken(std::string newToken);
+cpr::Response fetch_submissions();
+
+cpr::Response fetch_token();
+
+void set_token(std::string newToken);
 
 void refresh_token();
 
-cpr::Response fetchMessages();
+cpr::Response fetch_messages();
 
-cpr::Response fetchImage( std::string url);
+bool downloadImage(const std::string &url, const std::string &name);

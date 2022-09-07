@@ -6,6 +6,8 @@
 
 std::string token;
 
+
+// TODO : Handle errors gracefully for each method. Maybe use Exceptions ?
 // Should be done only once the original token expires.
 void refresh_token() {
     cpr::Response refresh_query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
@@ -28,7 +30,28 @@ void unsave_submission()
                                           cpr::UserAgent( USER_AGENT ));
 }
 
-cpr::Response fetchSubmissions() {
+void send_message(const std::string &user, const std::string &content, const std::string& subject)
+{
+    cpr::Response save_query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/compose"},
+                                          cpr::Header{{"Authorization", token}},
+                                          cpr::Parameters{{"subject", subject}, {"text", content}, {"to", user}},
+                                          cpr::VerifySsl( 0 ),
+                                          cpr::UserAgent( USER_AGENT ));
+}
+
+void remove_submission(const std::string& id)
+{
+    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/remove"},
+                                          cpr::Header{{"Authorization", token}},
+                                          cpr::Parameters{{"id", "t3_" + id}, {"spam", "false"}},
+                                          cpr::VerifySsl( 0 ),
+                                          cpr::UserAgent( USER_AGENT ));
+}
+
+
+
+
+cpr::Response fetch_submissions() {
     return cpr::Get(cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/new"},
                                         cpr::Header{{"Authorization", token}},
                                         cpr::Parameters{{"g", "GLOBAL"}, {"limit", "1"}},
@@ -37,7 +60,7 @@ cpr::Response fetchSubmissions() {
 }
 
 
-cpr::Response fetchMessages() {
+cpr::Response fetch_messages() {
     return cpr::Get(cpr::Url{"https://oauth.reddit.com/message/inbox"}, // TODO: change to unread
                     cpr::Header{{"Authorization", token}},
                     cpr::Parameters{{"mark", "true"}, {"limit", "2"}},
@@ -46,14 +69,22 @@ cpr::Response fetchMessages() {
 }
 
 
-cpr::Response fetchImage( std::string url) {
-    return cpr::Get(cpr::Url{"https://i.redd.it/xi16okzxbdn81.jpg"},
-                                           cpr::VerifySsl(0),
-                                           cpr::UserAgent(USER_AGENT));
+bool download_image( const std::string &url) {
+
+    cpr::Response imageQuery = cpr::Get(cpr::Url{url},
+                                        cpr::VerifySsl(0),
+                                        cpr::UserAgent(USER_AGENT));
+
+    if (imageQuery.status_code == 200) {
+        std::ofstream tempFile(IMAGE_NAME);
+        tempFile << imageQuery.text;
+        return true;
+    }
+    return false;
 }
 
 
-cpr::Response fetchToken() {
+cpr::Response fetch_token() {
     cpr::Response access_query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
                                            cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ", "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
                                            cpr::Parameters{{"grant_type", "password"}, {"username", "Im_a_Necrophiliac"},  {"password", "soleil"}, {"code", "8P8dRN4wS299Vy-K3_177uO7t8DIMw#_"}},
@@ -63,6 +94,6 @@ cpr::Response fetchToken() {
     return access_query;
 }
 
-void setToken(std::string newToken) {
+void set_token( std::string newToken) {
     token = newToken;
 }

@@ -13,11 +13,19 @@ public:
    string title;
    string shortlink;
    string fullname;
+   string id;
    bool isVideo;
    bool isGallery;
-   string url;
    int score;
-   optional<vector<string>> galleryUrls;
+
+   string url;
+   vector<string> galleryUrls;
+
+    // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
+   int getEditDistance(const std::string &first, const std::string& second);
+
+   // Useful for OCR text and title comparison
+   double findStringSimilarity(const std::string &first, const std::string &second);
 
    void operator<<( json data );
 };
@@ -31,6 +39,11 @@ public:
    string author;
 
    void operator<<( json data );
+};
+
+class SubredditSetting
+{
+
 };
 
 

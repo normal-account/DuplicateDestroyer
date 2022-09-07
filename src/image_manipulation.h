@@ -4,7 +4,8 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <gmpxx.h>
-
+#include <tesseract/baseapi.h>
+#include <leptonica/allheaders.h>
 #define IMAGE_NAME "image_in_process"
 
 using namespace cv;
@@ -14,6 +15,15 @@ class Image {
 public:
    Mat matrix;
 
-   mpz_class hash10x10();
-   mpz_class hash8x8();
+   int compareHash(const mpz_class &hash1, const mpz_class &hash2);
+   int compareHash10x10(const mpz_class& hash);
+   int compareHash8x8(const mpz_class& hash);
+   void computeHash10x10();
+   void computeHash8x8();
+   mpz_class getHash10x10() { return hash10x10; };
+   mpz_class getHash8x8() { return hash8x8; }
+   string extractTextFromImage();
+private:
+   mpz_class hash10x10;
+   mpz_class hash8x8;
 };

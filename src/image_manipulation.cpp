@@ -1,10 +1,11 @@
 #include "image_manipulation.h"
 
+extern tesseract::TessBaseAPI* api;
 
 // There is some precision loss with the GMP library. Getting a max of +- 200 difference on the final hash on each
 // execution. This is caused by the nature of GMP, which stores big integers like floats. It should not be an issue
 // considering the absurd high value of the final hash.
-mpz_class Image::hash10x10()
+void Image::computeHash10x10()
 {
     Mat matrix10px;
 
@@ -36,11 +37,11 @@ mpz_class Image::hash10x10()
             previousPixel = pixel;
         }
     }
-    return differenceHash;
+    this->hash10x10 = differenceHash;
 }
 
 // No precision loss on this method considering the much smaller hash.
-mpz_class Image::hash8x8()
+void Image::computeHash8x8()
 {
     Mat matrix8px;
 
@@ -73,5 +74,38 @@ mpz_class Image::hash8x8()
             previousPixel = pixel;
         }
     }
-    return differenceHash;
+    this->hash8x8 = differenceHash;
+}
+
+int Image::compareHash10x10( const mpz_class &hash) {
+    return compareHash(this->hash10x10, hash);
+}
+
+int Image::compareHash8x8( const mpz_class &hash) {
+    return compareHash(this->hash8x8, hash);
+}
+
+int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
+{
+    mpz_class xorHash = hash1 ^ hash2;
+    string binaryHash = xorHash.get_str(2);
+    int count = 0;
+    for (char i : binaryHash) {
+        if (i == '1')
+            count++;
+    }
+    int mediaSimilarity = int(( (64 - count ) * 100) / 64.0);
+    return mediaSimilarity;
+}
+
+string extractTextFromImage()
+{
+    char *outText;
+    Pix *pix = pixRead(IMAGE_NAME);
+    api->SetImage(pix);
+    outText = api->GetUTF8Text();
+    string outString = outText;
+    std::cout << "OCR Output : " << std::endl << outString << std::endl;
+    delete outText;
+    return outString;
 }
