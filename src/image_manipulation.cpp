@@ -98,7 +98,7 @@ int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
     return mediaSimilarity;
 }
 
-string extractTextFromImage()
+string Image::extractTextFromImage()
 {
     char *outText;
     Pix *pix = pixRead(IMAGE_NAME);

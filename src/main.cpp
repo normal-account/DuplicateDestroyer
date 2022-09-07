@@ -1,9 +1,9 @@
 #include "api_wrapper.h"
-#include "reddit_entities.h"
 #include "image_manipulation.h"
-#include "db_interface.h"
+#include "reddit_entities.h"
 
 tesseract::TessBaseAPI* api;
+using namespace ::mysqlx;
 
 // Should be done only once the original token expires.
 void initializeToken()
@@ -56,34 +56,40 @@ int main()
     std::cout << query.execute().begin().operator*().get(0) << std::endl;*/
     //std::cout << db.getTables().begin().operator*().select().execute().begin().operator*().get(0) << std::endl;
 
-
     cpr::Response submissionQuery = fetch_submissions();
 
     json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
-    Submission submission;
+
     for ( auto submissionIter = submissionList.begin(); submissionIter != submissionList.end(); submissionIter++)
     {
-        submission << submissionIter.value()[ "data" ];
+        Submission submission(submissionIter.value()[ "data" ]);
+        auto settingsQuery = interface.get_subreddit_settings(submission.subreddit);
+        SubredditSetting settings(settingsQuery);
+
         cout << submission . shortlink << " " << submission . title << " " << submission . url << endl;
 
-    }
-
-    Image image;
-    if (submission.isGallery) {
-        for (const auto& url : submission.galleryUrls) {
-            downloadImage(url, IMAGE_NAME);
+        Image image;
+        if (submission.isGallery) {
+            for (const auto& url : submission.galleryUrls) {
+                downloadImage(url, IMAGE_NAME);
+                image.matrix = imread(IMAGE_NAME);
+            }
+        }
+        else {
+            downloadImage(submission.url, IMAGE_NAME);
             image.matrix = imread(IMAGE_NAME);
-        }
-    }
-    else {
-        downloadImage(submission.url, IMAGE_NAME);
-        image.matrix = imread(IMAGE_NAME);
-        image.computeHash8x8();
-        for (const auto& dbHash : *interface.get_8x8_hashes()) {
-            int similarity = image.compareHash8x8(dbHash);
+            image.computeHash8x8();
+            auto ocrStrings = interface.get_ocr_strings();
+            for (const auto& dbHash : *interface.get_8x8_hashes()) {
+                int similarity = image.compareHash8x8(dbHash);
+                if (similarity > settings.report_threshold && ) {
 
+                }
+            }
         }
     }
+
+
 
     //downloadImage(submission.url);
     /*Image image;
@@ -94,9 +100,8 @@ int main()
     cpr::Response messageQuery = fetch_messages();
 
     json messageList = json::parse( messageQuery.text )[ "data" ][ "children" ];
-    Message message;
     for ( auto messageIter = messageList.begin(); messageIter != messageList.end(); messageIter++) {
-        message << messageIter.value();
+        Message message(messageIter.value());
         if (!message.isReply)
             cout << message.author << " " << message.subject << endl;
     }

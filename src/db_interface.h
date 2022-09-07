@@ -3,9 +3,10 @@
 #include <iostream>
 #include <mysqlx/xdevapi.h>
 #include <memory>
+#include <utility>
 #include <gmpxx.h>
-using namespace ::mysqlx;
 
+using namespace ::mysqlx;
 class db_interface
 {
 private:
@@ -22,11 +23,16 @@ public:
 
     std::shared_ptr<std::vector<mpz_class>> get_8x8_hashes();
 
+    mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> get_subreddit_settings(const std::string &name);
+
     std::shared_ptr<std::vector<mpz_class>> get_10x10_hashes();
 
-    void switch_subreddit(std::string sub) {
-        this->subreddit = sub;
+   std::shared_ptr<std::vector<std::string>> get_ocr_strings();
+
+   void switch_subreddit(std::string sub) {
+        this->subreddit = std::move(sub);
     }
+
 
 };
 
