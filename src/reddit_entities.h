@@ -27,11 +27,7 @@ public:
    std::string url;
    vector<std::string> galleryUrls;
 
-    // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
-   int getEditDistance(const std::string &first, const std::string& second);
 
-   // Useful for OCR text and title comparison
-   double findStringSimilarity(const std::string &first, const std::string &second);
 };
 
 class Message

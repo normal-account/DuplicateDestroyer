@@ -79,11 +79,36 @@ int main()
             downloadImage(submission.url, IMAGE_NAME);
             image.matrix = imread(IMAGE_NAME);
             image.computeHash8x8();
-            auto ocrStrings = interface.get_ocr_strings();
-            for (const auto& dbHash : *interface.get_8x8_hashes()) {
-                int similarity = image.compareHash8x8(dbHash);
-                if (similarity > settings.report_threshold && ) {
+            auto ocrStringsQuery = interface.get_ocr_strings();
+            auto hashesQuery = interface.get_8x8_hashes();
+            auto ocrStrings = ocrStringsQuery->begin();
+            auto hashes = hashesQuery->begin();
+            bool submissionRemoved = false;
+            for (; ocrStrings != ocrStringsQuery->end() && hashes != hashesQuery->end(); ocrStrings++, hashes++) {
+                int similarity = image.compareHash8x8(*hashes);
+                std::string imageOcrString = image.extractTextFromImage();
+                if (similarity > settings.report_threshold &&
+                image.get_string_similarity(*ocrStrings, imageOcrString) > settings.ocr_text_threshold) {
+                    remove_submission(submission.id);
+                    submissionRemoved = true;
+                }
+            }
 
+            if (!submissionRemoved) {
+                image.computeHash8x8();
+                ocrStringsQuery = interface.get_ocr_strings();
+                hashesQuery = interface.get_8x8_hashes();
+                ocrStrings = ocrStringsQuery->begin();
+                hashes = hashesQuery->begin();
+                submissionRemoved = false;
+                for (; ocrStrings != ocrStringsQuery->end() && hashes != hashesQuery->end(); ocrStrings++, hashes++) {
+                    int similarity = image.compareHash8x8(*hashes);
+                    std::string imageOcrString = image.extractTextFromImage();
+                    if (similarity > settings.remove_threshold &&
+                        image.get_string_similarity(*ocrStrings, imageOcrString) > settings.ocr_text_threshold) {
+                        remove_submission(submission.id);
+                        submissionRemoved = true;
+                    }
                 }
             }
         }

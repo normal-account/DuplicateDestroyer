@@ -68,6 +68,15 @@ cpr::Response fetch_messages() {
                     cpr::UserAgent(USER_AGENT));
 }
 
+void submit_removal_comment(const std::string &id) {
+     cpr::Get(cpr::Url{"https://oauth.reddit.com/api/comment"}, // TODO: change to unread
+                    cpr::Header{{"Authorization", token}},
+                    cpr::Parameters{{"api_type", "json"}, {"text", ""}, {"thing_id", id}},
+                    cpr::VerifySsl(0),
+                    cpr::UserAgent(USER_AGENT));
+}
+
+
 
 bool download_image( const std::string &url) {
 

@@ -22,8 +22,15 @@ public:
    void computeHash8x8();
    mpz_class getHash10x10() { return hash10x10; };
    mpz_class getHash8x8() { return hash8x8; }
+   // Used for OCR text and title comparison
+   double get_string_similarity(const std::string &first, const std::string &second);
    string extractTextFromImage();
+
 private:
+   // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
+   int getEditDistance(const std::string &first, const std::string& second);
+
+
    mpz_class hash10x10;
    mpz_class hash8x8;
 };
