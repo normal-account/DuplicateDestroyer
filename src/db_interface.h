@@ -27,9 +27,12 @@ public:
 
     std::shared_ptr<std::vector<mpz_class>> get_10x10_hashes();
 
-   std::shared_ptr<std::vector<std::string>> get_ocr_strings();
+    std::shared_ptr<std::vector<std::string>> get_ocr_strings();
 
-   void switch_subreddit(std::string sub) {
+    // Variable number of arguments.
+    //void insert_submission()
+
+    void switch_subreddit(std::string sub) {
         this->subreddit = std::move(sub);
     }
 

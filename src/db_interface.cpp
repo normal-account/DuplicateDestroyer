@@ -37,6 +37,9 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
     return get_hashes("10pxhash");
 }
 
+
+
+
 mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> db_interface::get_subreddit_settings(const std::string &name) {
     auto table = db->getTable("SubredditSettings");
     return table.select("*").where("'subreddit' = " + name).execute().begin();
