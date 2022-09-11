@@ -1,6 +1,7 @@
 #include "api_wrapper.h"
 #include "image_manipulation.h"
 #include "reddit_entities.h"
+#include "string_constants.h"
 
 tesseract::TessBaseAPI* tessBaseApi;
 ApiWrapper apiWrapper;
@@ -38,36 +39,64 @@ void initializeTesseract()
     atexit((destroyTesseract));
 }
 
+std::string create_markdown_header(const std::string &author, const std::string &date) {
+    return "**OP:** " + author + "\n\n" + "**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE;
+}
+
+std::string create_markdown_row(int number, int similarity, mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> row) {
+    auto id = (*row).get(3).get<std::string>();
+    auto author = (*row).get(4).get<std::string>();
+    auto dimensions = (*row).get(5).get<std::string>();
+    auto date = (*row).get(6).get<long long int>();
+    auto title = (*row).get(8).get<std::string>();
+    auto url = (*row).get(9).get<std::string>();
+    return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + std::to_string(date)
+        + " | " + std::to_string(date) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
+        + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
+}
+
 bool search_duplicates(Submission &submission, SubredditSetting &settings, bool eightPxHash) {
     Image image;
     apiWrapper.download_image(submission.url);
     image.matrix = imread(IMAGE_NAME);
     auto ocrStringsQuery = interface.get_ocr_strings();
-    std::shared_ptr<std::vector<mpz_class>> hashesQuery;
     mpz_class hash;
+    auto query = interface.get_image_rows();
+    std::string comment_content;
 
-    if (eightPxHash) {
+    if (eightPxHash)
         image.computeHash8x8();
-        hashesQuery = interface.get_8x8_hashes();
-    }
-    else {
-        image.computeHash10x10();
-        hashesQuery = interface.get_10x10_hashes();
+    else
+    {
+        image . computeHash10x10();
+        comment_content.append(HEADER_REMOVE_IMAGE);
     }
 
+    comment_content.append(create_markdown_header(submission.author, std::to_string(submission.created)));
+    std::string imageOcrString = image . extract_text();
     auto ocrStrings = ocrStringsQuery->begin();
-    auto hashes = hashesQuery->begin();
-    bool submissionRemoved = false;
-    for (; ocrStrings != ocrStringsQuery->end() && hashes != hashesQuery->end(); ocrStrings++, hashes++) {
-        int similarity =  eightPxHash ? image.compareHash8x8(*hashes) : image.compareHash10x10(*hashes);
-        std::string imageOcrString = image . extract_text();
+    auto row = query->begin();
+    int number = 0;
+
+    for (; ocrStrings != ocrStringsQuery->end() && row != query->end(); ocrStrings++, ++row) {
+        int similarity = eightPxHash ? image.compareHash8x8((*row).get(2).get<mpz_class>() ) : image.compareHash10x10( (*row).get(1).get<mpz_class>()  );
         if (similarity > settings.report_threshold &&
-            image.get_string_similarity(*ocrStrings, imageOcrString) > settings.ocr_text_threshold) {
+        image.get_string_similarity(*ocrStrings, imageOcrString) > settings.ocr_text_threshold) {
+            number++;
+            comment_content.append(create_markdown_row(number, similarity, row));
             apiWrapper.remove_submission(submission.id);
-            submissionRemoved = true;
         }
     }
-    return submissionRemoved;
+
+    if (!eightPxHash)
+        comment_content.append(FOOTER_REMOVE_IMAGE);
+
+    if (number > 0)
+        interface.insert_submission(imageOcrString, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, "", 10, submission.isVideo, submission.title);
+
+    apiWrapper.submit_removal_comment(comment_content, submission.id);
+
+    return number > 0;
 }
 
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
@@ -92,6 +121,7 @@ int main()
 
     for ( auto submissionIter = submissionList.begin(); submissionIter != submissionList.end(); submissionIter++)
     {
+        std::cout << submissionIter.value()[ "data" ] << std::endl;
         Submission submission(submissionIter.value()[ "data" ]);
         auto settingsQuery = interface.get_subreddit_settings(submission.subreddit);
         SubredditSetting settings(settingsQuery);
@@ -100,7 +130,10 @@ int main()
 
         if (submission.isGallery) {
             for (const auto& url : submission.galleryUrls) {
-                search_duplicates(submission, settings, true);
+                bool submissionRemoved = search_duplicates(submission, settings, true);
+                if (!submissionRemoved) {
+                    search_duplicates(submission, settings, false);
+                }
             }
         }
         else {

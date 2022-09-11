@@ -27,7 +27,7 @@ public:
 
    bool download_image( const std::string &url );
 
-   void submit_removal_comment( const std::string &id );
+   void submit_removal_comment(const std::string &content, const std::string &id );
 
    void unsave_submission( const std::string &id );
 };

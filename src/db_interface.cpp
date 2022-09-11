@@ -8,7 +8,7 @@
 std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::string& hash_type) {
     auto hashes = std::make_shared<std::vector<mpz_class>>();
     auto table = db->getTable(subreddit);
-    auto query = table.select(hash_type).where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto query = table.select(/*hash_type*/"*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
 
     auto result = query.execute().begin().operator*().get(0);
     for (const auto& it : result) {
@@ -17,6 +17,22 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
         hashes->push_back(mpzHash);
     }
     return hashes;
+}
+
+
+std::shared_ptr<RowResult> db_interface::get_image_rows() {
+    auto table = db->getTable(subreddit);
+    auto query = table.select("*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    return std::make_shared<RowResult>(query.execute());
+}
+
+
+void db_interface::insert_submission( const string &ocrtext, const string &tenpx, const string &eightpx, const string &id, const string &author,
+                                      const string &dimensions, long long int date, bool isVideo, const string &title )
+{
+    auto table = db->getTable(subreddit);
+    //ocrtext, tenpx, eightpx, id, dimensions, date, isVideo, title
+    table.insert().values(ocrtext, tenpx, eightpx, id, dimensions, date, isVideo, title).execute();
 }
 
 std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
@@ -36,8 +52,6 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 {
     return get_hashes("10pxhash");
 }
-
-
 
 
 mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> db_interface::get_subreddit_settings(const std::string &name) {

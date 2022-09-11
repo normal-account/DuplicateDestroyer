@@ -12,7 +12,7 @@ using json = nlohmann::json;
 class Submission
 {
 public:
-   Submission(json data);
+   explicit Submission(json data);
 
    std::string subreddit;
    std::string author;
@@ -20,9 +20,12 @@ public:
    std::string shortlink;
    std::string fullname;
    std::string id;
+   long long int created;
+
    bool isVideo;
    bool isGallery;
    int score;
+
 
    std::string url;
    vector<std::string> galleryUrls;

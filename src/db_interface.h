@@ -29,8 +29,11 @@ public:
 
     std::shared_ptr<std::vector<std::string>> get_ocr_strings();
 
-    // Variable number of arguments.
-    //void insert_submission()
+   void insert_submission( const string &ocrtext, const string &tenpx, const string &eightpx, const string &id, const string &author,
+                           const string &dimensions, long long int date, bool isVideo, const string &title);
+
+
+   std::shared_ptr<RowResult> get_image_rows();
 
     void switch_subreddit(std::string sub) {
         this->subreddit = std::move(sub);
