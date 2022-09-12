@@ -27,6 +27,7 @@ public:
    double get_string_similarity(const std::string &first, const std::string &second);
    void extract_text();
    [[nodiscard]] std::string get_text() const { return ocrText; }
+   cv::Size get_dimensions();
 
 private:
    // To consider a modified version of the Levenshtein algorithm that takes string length in consideration

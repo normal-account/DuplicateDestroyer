@@ -17,7 +17,7 @@ Submission::Submission( json data )
     isVideo = data[ "is_video" ];
     isGallery = !data[ "is_gallery" ].is_null();
     created = data[ "created" ];
-    shortlink = "redd.it/";
+    shortlink = "https://redd.it/";
     shortlink.append( id);
 
 

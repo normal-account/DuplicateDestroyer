@@ -141,3 +141,7 @@ double Image::get_string_similarity(const std::string &first, const std::string 
     }
     return 100.0;
 }
+
+cv::Size Image::get_dimensions() {
+    return matrix.size();
+}

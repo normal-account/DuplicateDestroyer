@@ -40,21 +40,53 @@ void initializeTesseract()
     atexit((destroyTesseract));
 }
 
-std::string create_markdown_header(const std::string &author, const std::string &date) {
-    return "**OP:** " + author + "\n\n" + "**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE;
+std::string dimensions_to_string(cv::Size dimensions) {
+    return std::to_string(dimensions.width) + "x" + std::to_string(dimensions.height);
 }
 
-std::string create_markdown_row(int number, int similarity, Row &row) {
+std::string create_markdown_header(const std::string &author, const std::string &date, const std::string &dimensions) {
+    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Dimensions:** " + dimensions + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE;
+}
+
+std::string get_time_interval(long long int ogTime, long long int newTime) {
+    long long int diff = newTime - ogTime;
+    std::string stringDiff;
+    if (diff > 31104000) {
+        stringDiff = std::to_string(diff / 31104000) + " year(s) before";
+    } else if (diff > 2592000) {
+        stringDiff = std::to_string(diff / 2592000) + " month(s) before";
+    } else if (diff > 86400) {
+        stringDiff = std::to_string(diff / 86400) + " day(s) before";
+    } else if (diff > 3600) {
+        stringDiff = std::to_string(diff / 3600) + " hour(s) before";
+    } else if (diff > 60) {
+        stringDiff = std::to_string(diff / 60) + " minute(s) before";
+    } else if (diff > 0) {
+        stringDiff = std::to_string(diff) + " second(s) before";
+    } else
+        stringDiff = "at the same time";
+    return stringDiff;
+}
+
+std::string unix_time_to_string(time_t unixTime) {
+    struct tm *tm = localtime(&unixTime);
+    char charDate[20];
+    strftime(charDate, sizeof(charDate), "%Y-%m-%d %H:%M:%S", tm);
+    std::string strDate(charDate);
+    return strDate;
+}
+
+std::string create_markdown_row(int number, int similarity, Row &row, long long submissionTime) {
     auto id = row.get(3).get<std::string>();
     auto author = row.get(4).get<std::string>();
     auto dimensions = row.get(5).get<std::string>();
-    auto unixDate = row.get(6).get<u_long>();
-    auto date = std::chrono::sys_seconds(std::chrono::seconds(unixDate));
-    //std::cout << date << std::endl;
+
+    auto unixDate = row.get(6).get<time_t>();
+
     auto title = row.get(8).get<std::string>();
     auto url = row.get(9).get<std::string>();
-    return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + std::to_string(unixDate)
-        + " | " + std::to_string(unixDate) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
+    return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
+        + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](https://" + url + ") | "
         + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
 }
 
@@ -71,7 +103,7 @@ bool search_duplicates(Submission &submission, SubredditSetting &settings, Image
         commentContent.append(HEADER_REMOVE_IMAGE);
     }
 
-    commentContent.append(create_markdown_header(submission.author, std::to_string(submission.created)));
+    commentContent.append(create_markdown_header(submission.author, unix_time_to_string(submission.created), dimensions_to_string(image.get_dimensions())));
     std::string imageOcrString = image . get_text();
 
     int numberDuplicates = 0;
@@ -84,7 +116,7 @@ bool search_duplicates(Submission &submission, SubredditSetting &settings, Image
         if (similarity > settings.report_threshold &&
         image.get_string_similarity(row.get(0).get<std::string>(), imageOcrString) > settings.ocr_text_threshold) {
             numberDuplicates++;
-            commentContent.append(create_markdown_row( numberDuplicates, similarity, row));
+            commentContent.append(create_markdown_row( numberDuplicates, similarity, row, submission.created ));
         }
     }
 
@@ -107,7 +139,7 @@ void handle_image(Submission &submission, SubredditSetting &settings, const std:
     process_image(image, url);
     bool submissionRemoved = search_duplicates(submission, settings, image, true, commentContent);
     if (submissionRemoved) {
-        apiWrapper.remove_submission(submission.fullname);
+        apiWrapper . remove_submission(submission.fullname);
         apiWrapper . submit_comment( commentContent, submission . fullname );
     } else {
         submissionRemoved = search_duplicates(submission, settings, image, false, commentContent);
@@ -116,7 +148,7 @@ void handle_image(Submission &submission, SubredditSetting &settings, const std:
             apiWrapper . submit_comment( commentContent, submission . fullname );
             apiWrapper . report_submission( submission . fullname );
         } else
-            interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, "", submission.created, submission.isVideo, submission.title, url);
+            interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.isVideo, submission.title, url);
     }
 }
 
