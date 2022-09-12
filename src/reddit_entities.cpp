@@ -18,7 +18,7 @@ Submission::Submission( json data )
     isGallery = !data[ "is_gallery" ].is_null();
     created = data[ "created" ];
     shortlink = "redd.it/";
-    shortlink.append( fullname.replace(0, 3, "", 0, 0) ); // Getting the id from the fullname
+    shortlink.append( id);
 
 
     if (isVideo)
@@ -50,22 +50,24 @@ Message::Message( json data ) {
     }
 }
 
- SubredditSetting::SubredditSetting(const mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> &settings)
+ SubredditSetting::SubredditSetting( RowResult &settingRows)
  {
     // Conversions needed here
+    auto settings = settingRows.begin();
     enabled = (bool)(*settings).get(1);
-    remove_threshold = (int)(*settings).get(2);
-    report_threshold = (int)(*settings).get(3);
-    enforce_videos = (bool)(*settings).get(4);
-    enforce_images = (bool)(*settings).get(5);
-    enforce_links = (bool)(*settings).get(6);
-    time_range = (int)(*settings).get(7);
-    report_links = (bool)(*settings).get(8);
-    report_replies = (bool)(*settings).get(9);
-    enforce_titles = (bool)(*settings).get(10);
-    title_remove_threshold = (int)(*settings).get(11);
-    title_report_threshold = (int)(*settings).get(12);
-    min_title_length_to_enforce = (int)(*settings).get(13);
-    removal_table_duplicate_number = (int)(*settings).get(14);
-    ocr_text_threshold = (int)(*settings).get(15);
+    imported = (bool)(*settings).get(2);
+    remove_threshold = (int)(*settings).get(3);
+    report_threshold = (int)(*settings).get(4);
+    enforce_videos = (bool)(*settings).get(5);
+    enforce_images = (bool)(*settings).get(6);
+    enforce_links = (bool)(*settings).get(7);
+    time_range = (int)(*settings).get(8);
+    report_links = (bool)(*settings).get(9);
+    report_replies = (bool)(*settings).get(10);
+    enforce_titles = (bool)(*settings).get(11);
+    title_remove_threshold = (int)(*settings).get(12);
+    title_report_threshold = (int)(*settings).get(13);
+    min_title_length_to_enforce = (int)(*settings).get(14);
+    removal_table_duplicate_number = (int)(*settings).get( 15);
+    ocr_text_threshold = (int)(*settings).get(16);
  }

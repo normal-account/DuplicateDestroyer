@@ -14,6 +14,7 @@ using namespace std;
 class Image {
 public:
    Mat matrix;
+   std::string ocrText;
 
    int compareHash(const mpz_class &hash1, const mpz_class &hash2);
    int compareHash10x10(const mpz_class& hash);
@@ -24,7 +25,8 @@ public:
    mpz_class getHash8x8() { return hash8x8; }
    // Used for OCR text and title comparison
    double get_string_similarity(const std::string &first, const std::string &second);
-   string extract_text();
+   void extract_text();
+   string get_text() const { return ocrText; }
 
 private:
    // To consider a modified version of the Levenshtein algorithm that takes string length in consideration

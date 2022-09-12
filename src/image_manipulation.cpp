@@ -98,16 +98,14 @@ int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
     return mediaSimilarity;
 }
 
-string Image::extract_text()
+void Image::extract_text()
 {
     char *outText;
     Pix *pix = pixRead(IMAGE_NAME);
     tessBaseApi->SetImage( pix);
     outText = tessBaseApi->GetUTF8Text();
-    string outString = outText;
-    std::cout << "OCR Output : " << std::endl << outString << std::endl;
+    ocrText = outText;
     delete outText;
-    return outString;
 }
 
 // To consider a modified version of the Levenshtein algorithm that takes string length in consideration

@@ -46,9 +46,10 @@ public:
 class SubredditSetting
 {
 public:
-    explicit SubredditSetting(const mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row>& settings);
+    explicit SubredditSetting(RowResult &settings);
 
     bool enabled;
+    bool imported;
     int remove_threshold;
     int report_threshold;
     bool enforce_videos;

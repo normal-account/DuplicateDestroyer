@@ -47,6 +47,7 @@ void ApiWrapper::remove_submission(const std::string& id)
                                           cpr::Parameters{{"id", "t3_" + id}, {"spam", "false"}},
                                           cpr::VerifySsl( false ),
                                           cpr::UserAgent( USER_AGENT ));
+    std::cout << query.error.message << std::endl;
 }
 
 
@@ -69,12 +70,13 @@ cpr::Response ApiWrapper::fetch_messages() {
                     cpr::UserAgent(USER_AGENT));
 }
 
-void ApiWrapper::submit_removal_comment(const std::string &content, const std::string &id) {
-     cpr::Get(cpr::Url{"https://oauth.reddit.com/api/comment"},
+void ApiWrapper::submit_removal_comment(const std::string &content, const std::string &fullname) {
+     auto query = cpr::Post(cpr::Url{"https://oauth.reddit.com/api/comment"},
                     cpr::Header{{"Authorization", token}},
-                    cpr::Parameters{{"api_type", "json"}, {"text", content}, {"thing_id", id}},
+                    cpr::Parameters{{"api_type", "json"}, {"text", content}, {"thing_id", fullname}, {"return_rtjson", "false"}},
                     cpr::VerifySsl(false),
                     cpr::UserAgent(USER_AGENT));
+    std::cout << query.status_code << std::endl;
 }
 
 

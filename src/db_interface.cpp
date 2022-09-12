@@ -7,7 +7,8 @@
 
 std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::string& hash_type) {
     auto hashes = std::make_shared<std::vector<mpz_class>>();
-    auto table = db->getTable(subreddit);
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(subreddit);
     auto query = table.select(/*hash_type*/"*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
 
     auto result = query.execute().begin().operator*().get(0);
@@ -21,24 +22,26 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
 
 
 std::shared_ptr<RowResult> db_interface::get_image_rows() {
-    auto table = db->getTable(subreddit);
-    auto query = table.select("*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(subreddit);
+    auto query = table.select("*");//.where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
     return std::make_shared<RowResult>(query.execute());
 }
 
 
-void db_interface::insert_submission( const string &ocrtext, const string &tenpx, const string &eightpx, const string &id, const string &author,
-                                      const string &dimensions, long long int date, bool isVideo, const string &title )
+void db_interface::insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id,
+                                      const std::string &author, const std::string &dimensions, long long int date, bool isVideo, const std::string &title )
 {
-    auto table = db->getTable(subreddit);
-    //ocrtext, tenpx, eightpx, id, dimensions, date, isVideo, title
-    table.insert().values(ocrtext, tenpx, eightpx, id, dimensions, date, isVideo, title).execute();
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(subreddit);
+    table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, "").execute();
 }
 
 std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
 {
+    auto db = session.getSchema("all_reposts");
     auto ocr_strings = std::make_shared<std::vector<std::string>>();
-    auto table = db->getTable(subreddit);
+    auto table = db.getTable(subreddit);
     auto query = table.select("ocr_hash").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
     return ocr_strings;
 }
@@ -54,10 +57,16 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 }
 
 
-mysqlx::internal::Iterator<mysqlx::internal::Row_result_detail<mysqlx::abi2::r0::Columns>, mysqlx::Row> db_interface::get_subreddit_settings(const std::string &name) {
-    auto table = db->getTable("SubredditSettings");
-    return table.select("*").where("'subreddit' = " + name).execute().begin();
+mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable("SubredditSettings");
+    std::string where = "subreddit = " + name;
+    auto row = table.select("*").execute();
+    assert(row.count());
+
+    return row;
 }
+
 
 
 

@@ -5,7 +5,7 @@
 
 tesseract::TessBaseAPI* tessBaseApi;
 ApiWrapper apiWrapper;
-db_interface interface("localhost", 33060, "db_user", "soleil");
+db_interface interface( (Session("localhost", 33060, "db_user", "soleil")));
 
 using namespace ::mysqlx;
 
@@ -35,6 +35,7 @@ void initializeTesseract()
 
     // Or PSM_AUTO_OSD for extra info (OSD). Difference not significiant.
     // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
+    tessBaseApi->SetVariable("debug_file", "/dev/null");
     tessBaseApi->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
     atexit((destroyTesseract));
 }
@@ -47,7 +48,7 @@ std::string create_markdown_row(int number, int similarity, mysqlx::internal::It
     auto id = (*row).get(3).get<std::string>();
     auto author = (*row).get(4).get<std::string>();
     auto dimensions = (*row).get(5).get<std::string>();
-    auto date = (*row).get(6).get<long long int>();
+    auto date = (*row).get(6).get<u_long>();
     auto title = (*row).get(8).get<std::string>();
     auto url = (*row).get(9).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + std::to_string(date)
@@ -55,11 +56,9 @@ std::string create_markdown_row(int number, int similarity, mysqlx::internal::It
         + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
 }
 
-bool search_duplicates(Submission &submission, SubredditSetting &settings, bool eightPxHash) {
-    Image image;
-    apiWrapper.download_image(submission.url);
-    image.matrix = imread(IMAGE_NAME);
-    auto ocrStringsQuery = interface.get_ocr_strings();
+bool search_duplicates(Submission &submission, SubredditSetting &settings, Image &image, bool eightPxHash) {
+
+    //auto ocrStringsQuery = interface.get_ocr_strings();
     mpz_class hash;
     auto query = interface.get_image_rows();
     std::string comment_content;
@@ -73,30 +72,39 @@ bool search_duplicates(Submission &submission, SubredditSetting &settings, bool 
     }
 
     comment_content.append(create_markdown_header(submission.author, std::to_string(submission.created)));
-    std::string imageOcrString = image . extract_text();
-    auto ocrStrings = ocrStringsQuery->begin();
+    std::string imageOcrString = image . get_text();
+    //auto ocrStrings = ocrStringsQuery->begin();
     auto row = query->begin();
-    int number = 0;
+    int numberDuplicates = 0;
 
-    for (; ocrStrings != ocrStringsQuery->end() && row != query->end(); ocrStrings++, ++row) {
-        int similarity = eightPxHash ? image.compareHash8x8((*row).get(2).get<mpz_class>() ) : image.compareHash10x10( (*row).get(1).get<mpz_class>()  );
+    for (; row != query->end(); ++row) {
+        std::string strhash =  eightPxHash ? (*row).get(2).get<std::string>() : (*row).get(1).get<std::string>();
+        mpz_class mpzhash;
+        mpzhash.set_str(strhash, 10);
+        int similarity = eightPxHash ? image.compareHash8x8(mpzhash) : image.compareHash10x10( mpzhash );
         if (similarity > settings.report_threshold &&
-        image.get_string_similarity(*ocrStrings, imageOcrString) > settings.ocr_text_threshold) {
-            number++;
-            comment_content.append(create_markdown_row(number, similarity, row));
-            apiWrapper.remove_submission(submission.id);
+        image.get_string_similarity((*row).get(0).get<std::string>(), imageOcrString) > settings.ocr_text_threshold) {
+            numberDuplicates++;
+            comment_content.append(create_markdown_row( numberDuplicates, similarity, row));
         }
     }
 
     if (!eightPxHash)
         comment_content.append(FOOTER_REMOVE_IMAGE);
 
-    if (number > 0)
-        interface.insert_submission(imageOcrString, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, "", 10, submission.isVideo, submission.title);
+    if (numberDuplicates > 0)
+    {
+        apiWrapper.remove_submission(submission.id);
+        apiWrapper . submit_removal_comment( comment_content, submission . fullname );
+    }
 
-    apiWrapper.submit_removal_comment(comment_content, submission.id);
+    return numberDuplicates > 0;
+}
 
-    return number > 0;
+void process_image(Image &image, const std::string &url) {
+    apiWrapper.download_image(url);
+    image.matrix = imread(IMAGE_NAME);
+    image.extract_text();
 }
 
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
@@ -104,7 +112,6 @@ int main()
 {
     initializeToken();
     initializeTesseract();
-
 
     /* <-- SUBMISSIONS --> */
     // Check status of mysqld service for further details
@@ -121,31 +128,39 @@ int main()
 
     for ( auto submissionIter = submissionList.begin(); submissionIter != submissionList.end(); submissionIter++)
     {
-        std::cout << submissionIter.value()[ "data" ] << std::endl;
         Submission submission(submissionIter.value()[ "data" ]);
-        auto settingsQuery = interface.get_subreddit_settings(submission.subreddit);
+        interface.switch_subreddit(submission.subreddit);
+        RowResult settingsQuery = interface.get_subreddit_settings(submission.subreddit);
         SubredditSetting settings(settingsQuery);
 
-        cout << submission . shortlink << " " << submission . title << " " << submission . url << endl;
+        Image image;
+
+        std::cout << submission.id << std::endl;
 
         if (submission.isGallery) {
             for (const auto& url : submission.galleryUrls) {
-                bool submissionRemoved = search_duplicates(submission, settings, true);
+                process_image(image, url);
+                bool submissionRemoved = search_duplicates(submission, settings, image, true);
                 if (!submissionRemoved) {
-                    search_duplicates(submission, settings, false);
+                    submissionRemoved = search_duplicates(submission, settings, image, false);
+                    if (!submissionRemoved)
+                        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, "", 10, submission.isVideo, submission.title);
                 }
             }
         }
         else {
-            bool submissionRemoved = search_duplicates(submission, settings, true);
+            process_image(image, submission.url);
+            bool submissionRemoved = search_duplicates(submission, settings, image, true);
             if (!submissionRemoved) {
-                search_duplicates(submission, settings, false);
+                submissionRemoved = search_duplicates(submission, settings, image, false);
+                if (!submissionRemoved)
+                    interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, "", 10, submission.isVideo, submission.title);
             }
         }
     }
 
 
-
+    exit(0);
     //downloadImage(submission.url);
     /*Image image;
     image.matrix = imread("test.jpg");*/
