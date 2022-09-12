@@ -30,8 +30,8 @@ public:
 
     std::shared_ptr<std::vector<std::string>> get_ocr_strings();
 
-    void insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id,
-                            const std::string &author, const std::string &dimensions, long long int date, bool isVideo, const std::string &title);
+    void insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id, const std::string &author,
+                            const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url );
 
 
     std::shared_ptr<RowResult> get_image_rows();

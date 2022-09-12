@@ -9,4 +9,4 @@ const std::string FOOTER_REMOVE_IMAGE = "I am a bot. If you believe this was sen
                                           "            \"DuplicateDestroyer.%20Here%20is%20a%20link%20to%20my%20post:%20\" + submission.shortlink + \").\"\n"
                                           "            \" **Do not delete your post or moderators won't be able to review it.**"*/
 
-const std::string MARKDOWN_TABLE = "N | User | Date | Posted... | URL | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+const std::string MARKDOWN_TABLE = "N | User | Date | Posted... | URL | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";

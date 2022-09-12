@@ -9,6 +9,7 @@ void Image::computeHash10x10()
 {
     Mat matrix10px;
 
+    //cv::
     cv::resize( matrix, matrix10px, {10, 10} );
     cvtColor( matrix10px, matrix10px, cv::COLOR_BGR2GRAY );
 

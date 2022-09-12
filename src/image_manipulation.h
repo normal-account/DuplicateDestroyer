@@ -21,12 +21,12 @@ public:
    int compareHash8x8(const mpz_class& hash);
    void computeHash10x10();
    void computeHash8x8();
-   mpz_class getHash10x10() { return hash10x10; };
-   mpz_class getHash8x8() { return hash8x8; }
+   [[nodiscard]] mpz_class getHash10x10() { return hash10x10; };
+   [[nodiscard]] mpz_class getHash8x8() { return hash8x8; }
    // Used for OCR text and title comparison
    double get_string_similarity(const std::string &first, const std::string &second);
    void extract_text();
-   string get_text() const { return ocrText; }
+   [[nodiscard]] std::string get_text() const { return ocrText; }
 
 private:
    // To consider a modified version of the Levenshtein algorithm that takes string length in consideration

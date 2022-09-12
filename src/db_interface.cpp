@@ -29,12 +29,12 @@ std::shared_ptr<RowResult> db_interface::get_image_rows() {
 }
 
 
-void db_interface::insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id,
-                                      const std::string &author, const std::string &dimensions, long long int date, bool isVideo, const std::string &title )
+void db_interface::insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id, const std::string &author,
+                                      const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url)
 {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, "").execute();
+    table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
 }
 
 std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
