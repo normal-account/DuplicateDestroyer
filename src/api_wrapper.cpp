@@ -6,12 +6,11 @@
 #include "api_wrapper.h"
 
 #define HEADERS cpr::Header{{"Authorization", token}}, cpr::VerifySsl(false), cpr::UserAgent(USER_AGENT))
-
-// TODO : Handle errors gracefully for each method. Maybe use Exceptions ?
+#define HANDLE_STATUS if (query.status_code != 200) throw
 // Should be done only once the original token expires.
 void ApiWrapper::refresh_token()
 {
-    cpr::Response refresh_query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
+    cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
                                              cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ",
                                                                  "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
                                              cpr::Parameters{{"grant_type",    "refresh_token"},
@@ -19,24 +18,37 @@ void ApiWrapper::refresh_token()
                                              cpr::VerifySsl( false ),
                                              cpr::UserAgent( USER_AGENT )
     );
-
+    HANDLE_STATUS;
 }
 
 void ApiWrapper::unsave_submission( const std::string &id )
 {
-    cpr::Response save_query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/unsave"},
+    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/unsave"},
                                           cpr::Parameters{{"id", "t3_hivul7"},},
     HEADERS;
+    HANDLE_STATUS;
 }
 
 void ApiWrapper::send_message( const std::string &user, const std::string &content, const std::string &subject )
 {
-    cpr::Response save_query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/compose"},
+    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/compose"},
                                           cpr::Parameters{{"subject", subject},
                                                           {"text",    content},
                                                           {"to",      user}},
     HEADERS;
+    HANDLE_STATUS;
 }
+
+
+void ApiWrapper::mark_message_as_read( const std::string &fullname )
+{
+    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/read_message"},
+                                          cpr::Parameters{{"id", fullname}},
+    HEADERS;
+    HANDLE_STATUS;
+}
+
+
 
 void ApiWrapper::remove_submission( const std::string &fullname )
 {
@@ -44,7 +56,7 @@ void ApiWrapper::remove_submission( const std::string &fullname )
                                      cpr::Parameters{{"id",   fullname},
                                                      {"spam", "false"}},
     HEADERS;
-
+    HANDLE_STATUS;
 }
 
 void ApiWrapper::report_submission( const std::string &fullname )
@@ -54,24 +66,29 @@ void ApiWrapper::report_submission( const std::string &fullname )
                                                      {"reason", "false"},
                                                      {"api_type", "json"}},
     HEADERS;
+    HANDLE_STATUS;
 }
 
 
 cpr::Response ApiWrapper::fetch_submissions()
 {
-    return cpr::Get( cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/new"},
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/new"},
                      cpr::Parameters{{"g",     "GLOBAL"},
                                      {"limit", "1"}},
     HEADERS;
+    HANDLE_STATUS;
+    return query;
 }
 
 
 cpr::Response ApiWrapper::fetch_messages()
 {
-    return cpr::Get( cpr::Url{"https://oauth.reddit.com/message/inbox"}, // TODO: change to unread
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/message/inbox"}, // TODO: change to unread
                      cpr::Parameters{{"mark",  "true"},
-                                     {"limit", "2"}},
+                                     {"limit", "1"}},
     HEADERS;
+    HANDLE_STATUS;
+    return query;
 }
 
 void ApiWrapper::submit_comment( const std::string &content, const std::string &id )
@@ -82,39 +99,36 @@ void ApiWrapper::submit_comment( const std::string &content, const std::string &
                                             {"thing_id",      id},
                                             {"return_rtjson", "false"}},
     HEADERS;
+    HANDLE_STATUS;
     // TODO: Return comment id
-    std::cout << query.text << std::endl;
 }
 
 
 void ApiWrapper::accept_invite( const std::string &subreddit )
 {
-    auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/r/" + subreddit + "/api/accept_moderator_invite"},
+    auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com" + subreddit + "/api/accept_moderator_invite"},
                             cpr::Parameters{{"api_type", "json"}},
     HEADERS;
+    HANDLE_STATUS;
 }
 
 
-bool ApiWrapper::download_image( const std::string &url )
+void ApiWrapper::download_image( const std::string &url )
 {
 
-    cpr::Response imageQuery = cpr::Get( cpr::Url{url},
+    cpr::Response query = cpr::Get( cpr::Url{url},
                                          cpr::VerifySsl( false ),
                                          cpr::UserAgent( USER_AGENT ));
 
-    if ( imageQuery . status_code == 200 )
-    {
-        std::ofstream tempFile( IMAGE_NAME );
-        tempFile << imageQuery . text;
-        return true;
-    }
-    return false;
+    HANDLE_STATUS;
+    std::ofstream tempFile( IMAGE_NAME );
+    tempFile << query . text;
 }
 
 
 cpr::Response ApiWrapper::fetch_token()
 {
-    cpr::Response access_query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
+    cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
                                             cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ",
                                                                 "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
                                             cpr::Parameters{{"grant_type", "password"},
@@ -124,7 +138,8 @@ cpr::Response ApiWrapper::fetch_token()
                                             cpr::VerifySsl( 0 ),
                                             cpr::UserAgent( USER_AGENT )
     );
-    return access_query;
+    HANDLE_STATUS;
+    return query;
 }
 
 void ApiWrapper::set_token( std::string newToken )

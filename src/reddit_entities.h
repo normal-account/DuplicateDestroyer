@@ -9,6 +9,12 @@ using namespace std;
 using namespace ::mysqlx;
 using json = nlohmann::json;
 
+enum TYPE {
+   IMAGE,
+   VIDEO,
+   LINK
+};
+
 class Submission
 {
 public:
@@ -22,7 +28,7 @@ public:
    std::string id;
    long long int created;
 
-   bool isVideo;
+   TYPE type;
    bool isGallery;
    int score;
 
@@ -30,7 +36,8 @@ public:
    std::string url;
    vector<std::string> galleryUrls;
 
-
+   bool is_video();
+   bool is_image();
 };
 
 class Message
@@ -40,7 +47,11 @@ public:
    bool isReply; // a message is either a reply or a private message
    std::string subject;
    std::string body;
-   std::string author;
+   std::string fullname;
+   std::optional<std::string> author;
+   std::optional<std::string> subreddit;
+   std::string type;
+   std::string id;
 };
 
 class SubredditSetting

@@ -14,39 +14,64 @@ Submission::Submission( json data )
     fullname = data[ "name" ];
     id = data[ "id" ];
     score = data[ "score" ];
-    isVideo = data[ "is_video" ];
     isGallery = !data[ "is_gallery" ].is_null();
     created = data[ "created" ];
     shortlink = "https://redd.it/";
-    shortlink.append( id);
-
-
-    if (isVideo)
-        url = data[ "thumbnail" ];
-    else {
+    shortlink.append(id);
+    url = data[ "url" ];
+    if (is_image()) {
+        type = IMAGE;
         if (isGallery) {
             json urlList = data["media_metadata"];
             for ( auto urlIter = urlList.begin(); urlIter != urlList.end(); urlIter++) {
                 std::string submissionID = urlIter.value()["id"];
-                std::string type = urlIter.value()["m"]; // e.g. for a PNG, "m" gives "image/jpg"
-                type = type.substr(6, type.size() - 6); // Extracting only the datatype (excluding 'image/')
+                std::string fileType = urlIter.value()["m"]; // e.g. for a PNG, "m" gives "image/jpg"
+                fileType = fileType.substr(6, fileType.size() - 6); // Extracting only the datatype (excluding 'image/')
                 std::string constructedURL;
-                constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( type);
+                constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( fileType );
                 galleryUrls.push_back(constructedURL);
             }
         }
-        else
-            url = data[ "url" ];
     }
+    else if (is_video()) {
+        type = VIDEO;
+        url = data[ "thumbnail" ];
+    }
+    else
+        type = LINK;
+}
+
+bool Submission::is_image()
+{
+
+    return (url.ends_with(".jpg") || url.ends_with(".jpg?1") || url.ends_with(".png") || url.ends_with("png?1")
+            || url.ends_with(".jpeg") || url.find("reddituploads.com") != std::string::npos || url.find("reutersmedia.net") != std::string::npos
+            || url.find("500px.org") != std::string::npos || url.find("redditmedia.com") != std::string::npos
+    );
+}
+
+bool Submission::is_video()
+{
+    return (url.ends_with(".gif") || url.ends_with(".mp4") || url.ends_with(".gifv") || url.find("v.redd.it") != std::string::npos
+            || url.find("redgifs.com") != std::string::npos || url.find("youtu.be") != std::string::npos || url.find("youtube.com") != std::string::npos
+            || url.find("giphy.com") != std::string::npos || url.find("gfycat.com") != std::string::npos || url.find("liveleak.com") != std::string::npos
+            || url.find("streamable.com") != std::string::npos);
 }
 
 Message::Message( json data ) {
-    isReply = data["kind"] == "t1";// "kind" returns type, e.g. "T1" or "T4"
-    if (!isReply)
-    {
+    type = data["kind"];
+    id = data["data"]["id"];
+    isReply = type == "t1";// "kind" returns type, e.g. "T1" or "T4"
+    fullname = (type == "unknown" ? "t4_" : type + "_") + id;
+    subject = data[ "data" ][ "subject" ];
+    body = data[ "data" ][ "body" ];
+    if (!data[ "data" ][ "author" ].is_null()) {
+        author.emplace();
         author = data[ "data" ][ "author" ];
-        subject = data[ "data" ][ "subject" ];
-        body = data[ "data" ][ "body" ];
+    }
+    if (!data[ "data" ][ "subreddit" ].is_null()) {
+        subreddit.emplace();
+        subreddit = data[ "data" ][ "subreddit" ];
     }
 }
 

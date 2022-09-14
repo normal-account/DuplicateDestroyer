@@ -25,7 +25,7 @@ public:
 
    cpr::Response fetch_messages();
 
-   bool download_image( const std::string &url );
+   void download_image( const std::string &url );
 
    void submit_comment( const std::string &content, const std::string &id );
 
@@ -34,4 +34,6 @@ public:
    void report_submission( const std::string &id );
 
    void accept_invite( const std::string &subreddit );
+
+   void mark_message_as_read( const std::string &fullname );
 };

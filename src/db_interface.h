@@ -40,7 +40,9 @@ public:
         this->subreddit = std::move(sub);
     }
 
+   void update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value);
 
+   void add_settings_row(const std::string& sub);
 };
 
 

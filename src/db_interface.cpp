@@ -51,6 +51,7 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_8x8_hashes()
     return get_hashes("8pxhash");
 }
 
+
 std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 {
     return get_hashes("10pxhash");
@@ -60,12 +61,28 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
-    std::string where = "subreddit = " + name;
-    auto row = table.select("*").execute();
+    std::string where = "subreddit = '" + name + "'";
+    auto row = table.select("*").where(where).execute();
     assert(row.count());
 
     return row;
 }
+
+void db_interface::update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value) {
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable("SubredditSettings");
+    std::string where = "subreddit = '" + sub + "'";
+    table.update().set(parameter, value).where(where).execute();
+}
+
+void db_interface::add_settings_row( const std::string &sub )
+{
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable("SubredditSettings");
+    // TODO : Revisit default values
+    table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 0, 0, 85, 95, 10, 5, 80).execute();
+}
+
 
 
 

@@ -1,3 +1,31 @@
+#define DB_OCRSTRING 0
+#define DB_10PXHASH 1
+#define DB_8PXHASH 2
+#define DB_ID 3
+#define DB_AUTHOR 4
+#define DB_DIMENSIONS 5
+#define DB_DATE 6
+#define DB_IS_VIDEO 7
+#define DB_TITLE 8
+#define DB_URL 9
+
+#define SS_SUBREDDIT 0
+#define SS_ENABLED 1
+#define SS_REMOVE_THRESHOLD 3
+#define SS_REPORT_THRESHOLD 4
+#define SS_ENFORCE_VIDEOS 5
+#define SS_ENFORCE_IMAGES 6
+#define SS_ENFORCE_LINKS 7
+#define SS_TIME_RANGE 8
+#define SS_REPORT_LINKS 9
+#define SS_REPORT_REPLIES 10
+#define SS_ENFORCE_TITLES 11
+#define SS_TITLE_REMOVE_THRESHOLD 12
+#define SS_TITLE_REPORT_THRESHOLD 13
+#define SS_MIN_TITLE_LENGTH_TO_ENFORCE 14
+#define SS_REMOVE_TABLE_DUPLICATE_INT 15
+#define SS_OCR_TEXT_THRESHOLD 16
+
 const std::string HEADER_REMOVE_IMAGE = "**Your submission has been removed because it has been posted on the subreddit recently.**";
 
 const std::string FOOTER_REMOVE_IMAGE = "I am a bot. If you believe this was sent in error, reply to this comment and a"
@@ -10,3 +38,39 @@ const std::string FOOTER_REMOVE_IMAGE = "I am a bot. If you believe this was sen
                                           "            \" **Do not delete your post or moderators won't be able to review it.**"*/
 
 const std::string MARKDOWN_TABLE = "N | User | Date | Posted... | URL | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+
+const std::string ERROR_SETTINGS_MSG = "**ERROR** : You've entered an invalid value for one of the settings. Please fix the issue and try again.";
+
+const std::string ERROR_NOT_FROM_SUB = "**ERROR** : Setting messages need to be sent directly from the designated subreddit.";
+
+const std::string UPDATE_SUCCESS_MSG = "Subreddit settings have been successfully updated.";
+
+const char *const SETTINGS_STRING = "Current subreddit settings :\n\n    enabled : %s\n    remove_threshold: %s\n    report_threshold: %s\n    enforce_videos: %s\n"
+                                    "    enforce_images: %s\n    enforce_links: %s\n    time_range: %s\n    report_links: %s\n    report_replies: %s\n"
+                                    "    enforce_titles: %s\n    title_remove_threshold: %s\n    title_report_threshold: %s\n    min_title_length_to_enforce: %s\n"
+                                    "    removal_table_duplicate_number: %s\n    ocr_text_threshold: %s";
+
+const std::string UPDATE_SUCCESS = "Successfully updated the following parameters : ";
+
+const std::string UPDATE_FAILURE = "Failure to update the following parameters due to invalid values : ";
+
+const std::set<std::string> BOOLEAN_SETTINGS = {
+        "enabled:",
+        "enforce_images:",
+        "enforce_videos:",
+        "enforce_links:",
+        "enforce_titles:",
+        "report_replies:",
+        "report_links:"
+};
+
+const std::set<std::string> INT_SETTINGS = {
+        "remove_threshold:",
+        "report_threshold:",
+        "title_remove_threshold:",
+        "title_report_threshold:",
+        "min_title_length_to_enforce:",
+        "time_range:",
+        "removal_table_duplicate_number:",
+        "ocr_text_threshold:"
+};
