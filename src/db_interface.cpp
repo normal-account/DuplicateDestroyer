@@ -24,10 +24,23 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
 std::shared_ptr<RowResult> db_interface::get_image_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*");//.where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto query = table.select("*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
     return std::make_shared<RowResult>(query.execute());
 }
 
+std::shared_ptr<RowResult> db_interface::get_link_rows() {
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(subreddit);
+    auto query = table.select("*").where("is_link = 1");
+    return std::make_shared<RowResult>(query.execute());
+}
+
+std::shared_ptr<RowResult> db_interface::get_title_rows(int minTitleLength) {
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(subreddit);
+    auto query = table.select("*").where("length(title) > " + std::to_string(minTitleLength));
+    return std::make_shared<RowResult>(query.execute());
+}
 
 void db_interface::insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id, const std::string &author,
                                       const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url)

@@ -110,7 +110,7 @@ void Image::extract_text()
 }
 
 // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
-int Image::getEditDistance(const std::string &first, const std::string& second)
+int getEditDistance(const std::string &first, const std::string& second)
 {
     int m = first.length();
     int n = second.length();
@@ -134,7 +134,7 @@ int Image::getEditDistance(const std::string &first, const std::string& second)
     return T[m][n];
 }
 
-double Image::get_string_similarity(const std::string &first, const std::string &second) {
+double get_string_similarity(const std::string &first, const std::string &second) {
     double max_length = std::max(first.length(), second.length());
     if (max_length > 0) {
         return ((max_length - getEditDistance(first, second)) / max_length ) * 100;

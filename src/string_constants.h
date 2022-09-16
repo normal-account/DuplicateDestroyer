@@ -28,7 +28,11 @@
 
 const std::string HEADER_REMOVE_IMAGE = "**Your submission has been removed because it has been posted on the subreddit recently.**";
 
-const std::string FOOTER_REMOVE_IMAGE = "I am a bot. If you believe this was sent in error, reply to this comment and a"
+const std::string HEADER_REMOVE_LINK = "**Your submission has been removed because at least 1 submission with the same URL has posted on the subreddit recently.**";
+
+const std::string HEADER_REMOVE_TITLE = "**Your submission has been removed because at least 1 submission with the same title has posted on the subreddit recently.**";
+
+const std::string FOOTER_REMOVE = "I am a bot. If you believe this was sent in error, reply to this comment and a"
                                         " moderator will review your post. **Do not delete your post or moderators won't be able to review it.**";
 
 /*const std::string FOOTER_REMOVE_IMAGE_2 = "I am a bot. If you believe this was sent in error, [please message the subreddit moderators here]"
@@ -37,7 +41,11 @@ const std::string FOOTER_REMOVE_IMAGE = "I am a bot. If you believe this was sen
                                           "            \"DuplicateDestroyer.%20Here%20is%20a%20link%20to%20my%20post:%20\" + submission.shortlink + \").\"\n"
                                           "            \" **Do not delete your post or moderators won't be able to review it.**"*/
 
-const std::string MARKDOWN_TABLE = "N | User | Date | Posted... | URL | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+const std::string MARKDOWN_TABLE_IMAGE = "N | User | Date | Posted... | Similarity | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+
+const std::string MARKDOWN_TABLE_LINK = "N | User | Date | Posted... | URL | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+
+const std::string MARKDOWN_TABLE_TITLE = "N | User | Date | Posted... | Similarity | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
 
 const std::string ERROR_SETTINGS_MSG = "**ERROR** : You've entered an invalid value for one of the settings. Please fix the issue and try again.";
 

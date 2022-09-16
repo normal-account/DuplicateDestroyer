@@ -53,10 +53,6 @@ std::string dimensions_to_string(cv::Size dimensions) {
     return std::to_string(dimensions.width) + "x" + std::to_string(dimensions.height);
 }
 
-std::string create_markdown_header(const std::string &author, const std::string &date, const std::string &dimensions) {
-    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Dimensions:** " + dimensions + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE;
-}
-
 std::string get_time_interval(long long int ogTime, long long int newTime) {
     long long int diff = newTime - ogTime;
     std::string stringDiff;
@@ -90,7 +86,15 @@ std::string unix_time_to_string(time_t unixTime) {
     return strDate;
 }
 
-std::string create_markdown_row(int number, int similarity, Row &row, long long submissionTime) {
+std::string create_image_markdown_header( const std::string &author, const std::string &date, const std::string &dimensions) {
+    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Dimensions:** " + dimensions + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE_IMAGE;
+}
+
+std::string create_markdown_header( const std::string &author, const std::string &date ) {
+    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE_IMAGE;
+}
+
+std::string create_image_markdown_row( int number, int similarity, Row &row, long long submissionTime) {
     auto id = row.get(DB_ID).get<std::string>();
     auto author = row.get(DB_AUTHOR).get<std::string>();
     auto dimensions = row.get(DB_DIMENSIONS).get<std::string>();
@@ -100,27 +104,42 @@ std::string create_markdown_row(int number, int similarity, Row &row, long long 
     auto title = row.get(DB_TITLE).get<std::string>();
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
-        + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](https://" + url + ") | "
-        + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
+           + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](https://" + url + ") | "
+           + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
 }
 
-bool search_duplicates(Submission &submission, SubredditSetting &settings, Image &image, bool eightPxHash, std::string &commentContent) {
 
-    mpz_class hash;
+std::string create_link_markdown_row( int number, Row &row, long long submissionTime) {
+    auto author = row.get(DB_AUTHOR).get<std::string>();
+    auto id = row.get(DB_ID).get<std::string>();
+    auto unixDate = row.get(DB_DATE).get<time_t>();
+    auto title = row.get(DB_TITLE).get<std::string>();
+    auto url = row.get(DB_URL).get<std::string>();
+    return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
+           + " | " + get_time_interval(unixDate, submissionTime) + " | [url](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
+}
+
+std::string create_title_markdown_row( int number, Row &row, long long submissionTime, int similarity) {
+    auto author = row.get(DB_AUTHOR).get<std::string>();
+    auto id = row.get(DB_ID).get<std::string>();
+    auto unixDate = row.get(DB_DATE).get<time_t>();
+    auto title = row.get(DB_TITLE).get<std::string>();
+    auto url = row.get(DB_URL).get<std::string>();
+    return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
+           + " | " + get_time_interval(unixDate, submissionTime) + "[" +
+           std::to_string(similarity) + "%](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
+}
+
+bool search_image_duplicates( Submission &submission, SubredditSetting &settings, Image &image) {
+    std::string commentContent;
+    mpz_class hash; mpz_class mpzhash;
+    int numberDuplicates = 0;
+    std::vector<std::string> reportComment; std::vector<std::string> removeComment;
+
     auto query = interface.get_image_rows();
 
-    if (eightPxHash)
-        image.computeHash8x8();
-    else
-    {
-        image . computeHash10x10();
-        commentContent.append(HEADER_REMOVE_IMAGE);
-    }
-
-    commentContent.append(create_markdown_header(submission.author, unix_time_to_string(submission.created), dimensions_to_string(image.get_dimensions())));
+    commentContent.append(create_image_markdown_header( submission . author, unix_time_to_string( submission . created ), dimensions_to_string( image . get_dimensions())));
     std::string imageOcrString = image . get_text();
-
-    int numberDuplicates = 0;
 
     for (auto row : *query) {
         if (numberDuplicates > settings.removal_table_duplicate_number)
@@ -129,19 +148,41 @@ bool search_duplicates(Submission &submission, SubredditSetting &settings, Image
         if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
-        std::string strhash =  eightPxHash ? row.get(DB_8PXHASH).get<std::string>() : row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
-        mpz_class mpzhash;
+        if (imageOcrString.size() > 5 && get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString) < settings.ocr_text_threshold )
+            continue;
+
+        std::string strhash = row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
-        int similarity = eightPxHash ? image.compareHash8x8(mpzhash) : image.compareHash10x10( mpzhash );
-        if (similarity > (eightPxHash ? settings.report_threshold : settings.remove_threshold) &&
-        image.get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString) > settings.ocr_text_threshold) {
+        int similarity = image.compareHash10x10( mpzhash );
+        if (similarity > settings.remove_threshold) {
             numberDuplicates++;
-            commentContent.append(create_markdown_row( numberDuplicates, similarity, row, submission.created ));
+            removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
+        } else if (removeComment.empty()){
+            strhash = row.get(DB_8PXHASH).get<std::string>();
+            mpzhash.set_str(strhash, 10);
+            similarity = image.compareHash8x8( mpzhash );
+            if (similarity > settings.remove_threshold) {
+                numberDuplicates++;
+                reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
+            }
         }
+
     }
 
-    if (!eightPxHash)
-        commentContent.append(FOOTER_REMOVE_IMAGE);
+    if (numberDuplicates > 0) {
+        if (!removeComment.empty()) {
+            commentContent = HEADER_REMOVE_IMAGE + commentContent;
+            for (const auto &str : removeComment)
+                commentContent.append(str);
+            commentContent.append( FOOTER_REMOVE);
+            apiWrapper.remove_submission(submission.fullname);
+        } else if (!reportComment.empty()) {
+            for (const auto &str : reportComment)
+                commentContent.append(str);
+            apiWrapper.report_submission(submission.fullname);
+        }
+        apiWrapper.submit_comment(commentContent, submission.fullname);
+    }
 
     return numberDuplicates > 0;
 }
@@ -156,28 +197,103 @@ void process_image(Image &image, const std::string &url) {
     apiWrapper.download_image(url);
     image.matrix = imread(IMAGE_NAME);
     image.extract_text();
+
+    image.computeHash8x8();
+    image . computeHash10x10();
 }
 
 
-void handle_image(Submission &submission, SubredditSetting &settings, const std::string &url) {
+bool handle_image(Submission &submission, SubredditSetting &settings, const std::string &url) {
     Image image;
     std::string commentContent;
     process_image(image, url);
-    bool submissionRemoved = search_duplicates(submission, settings, image, true, commentContent);
-    if (submissionRemoved) {
-        apiWrapper . submit_comment( commentContent, submission . fullname );
-        apiWrapper . remove_submission(submission.fullname);
-    } else {
-        submissionRemoved = search_duplicates(submission, settings, image, false, commentContent);
-        if (submissionRemoved)
-        {
-            apiWrapper . submit_comment( commentContent, submission . fullname );
-            apiWrapper . report_submission( submission . fullname );
-        } else
-            interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.isVideo, submission.title, url);
-    }
+    bool submissionRemoved = search_image_duplicates( submission, settings, image );
+    if (!submissionRemoved)
+        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+
+    return submissionRemoved;
 }
 
+bool handle_link(Submission &submission, SubredditSetting &settings) {
+    std::string commentContent;
+    auto query = interface.get_link_rows();
+
+    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created )));
+
+    int numberDuplicates = 0;
+
+    for (auto row : *query) {
+        if (numberDuplicates > settings.removal_table_duplicate_number)
+            break;
+
+        if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
+            continue;
+
+        if (submission.url == row.get(DB_URL).get<std::string>()) {
+            numberDuplicates++;
+            commentContent.append( create_link_markdown_row( numberDuplicates, row, submission . created ));
+        }
+    }
+
+    if (numberDuplicates > 0) {
+        if (!settings.report_links) {
+            commentContent.append(FOOTER_REMOVE);
+            apiWrapper.report_submission(submission.fullname);
+        }
+        else
+        {
+            commentContent = HEADER_REMOVE_LINK + commentContent;
+            apiWrapper . remove_submission( submission . fullname );
+        }
+        apiWrapper.submit_comment(commentContent, submission.fullname);
+    }
+    else
+        interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+    return numberDuplicates > 0;
+}
+
+void handle_title(Submission &submission, SubredditSetting &settings) {
+    std::string commentContent;
+    std::vector<std::string> reportComment; std::vector<std::string> removeComment;
+    auto query = interface.get_link_rows();
+
+    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created )));
+
+    int numberDuplicates = 0;
+
+    for (auto row : *query)
+    {
+        if ( numberDuplicates > settings . removal_table_duplicate_number )
+            break;
+
+        if ( get_days_interval( row . get( DB_DATE ) . get<u_long>(), submission . created ) > settings . time_range )
+            continue;
+
+        int similarity = (int)get_string_similarity(submission.title, row.get(DB_TITLE).get<std::string>());
+
+        if (similarity > settings.title_remove_threshold) {
+            removeComment.push_back(create_title_markdown_row( numberDuplicates, row, submission . created, similarity ));
+            numberDuplicates++;
+        }
+        else if (similarity > settings.title_report_threshold) {
+            reportComment.push_back(create_title_markdown_row( numberDuplicates, row, submission . created, similarity ));
+            numberDuplicates++;
+        }
+    }
+    if (numberDuplicates > 0) {
+        if (!removeComment.empty()) {
+            for (const auto &str : removeComment)
+                commentContent.append(str);
+            commentContent.append(FOOTER_REMOVE);
+            apiWrapper.remove_submission(submission.fullname);
+        }
+        else if (!reportComment.empty()) {
+            for (const auto &str : reportComment)
+                commentContent.append(str);
+            apiWrapper.report_submission(submission.fullname);
+        }
+    }
+}
 
 void iterate_submissions() {
     cpr::Response submissionQuery = apiWrapper.fetch_submissions();
@@ -191,13 +307,22 @@ void iterate_submissions() {
         RowResult settingsQuery = interface.get_subreddit_settings(submission.subreddit);
         SubredditSetting settings(settingsQuery);
 
-        if (submission.isGallery) {
-            for (const auto& url : submission.galleryUrls) {
-                handle_image(submission, settings, url);
-            }
+        bool submissionRemoved = false;
+
+        if ( (submission.type == IMAGE && settings.enforce_images) || (submission.type == VIDEO && settings.enforce_videos) )
+        {
+            if ( submission . isGallery )
+            {
+                for ( const auto &url : submission . galleryUrls )
+                    submissionRemoved = handle_image( submission, settings, url );
+            } else
+                submissionRemoved = handle_image( submission, settings, submission . url );
         }
-        else {
-            handle_image(submission, settings, submission.url);
+        else if (settings.enforce_links) // submission is a link
+            submissionRemoved = handle_link(submission, settings);
+
+        if (!submissionRemoved && settings.enforce_titles) { // Submission is a link/image/video and no duplicates exist ->  search for titles
+            handle_title(submission, settings);
         }
     }
 }
@@ -254,7 +379,7 @@ void iterate_messages() {
                 messageStream >> value;
                 if (value == "true" || value == "false") {
                     interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value == "true" ? "1" : "0");
-                    successes.append("`").append(parameter).append("`,");
+                    successes.append("`").append(parameter).append("`,"); // Create & format list of successful boolean parameters
                 } else
                 {
                     failures.append("`").append(parameter).append("`,");
@@ -264,7 +389,7 @@ void iterate_messages() {
                 messageStream >> value;
                 if (is_number(value)) {
                     interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value);
-                    successes.append("`").append(parameter).append("`,");
+                    successes.append("`").append(parameter).append("`,"); // Create & format list of successful int parameters
                 } else {
                     failures.append("`").append(parameter).append("`,");
                 }
@@ -279,10 +404,7 @@ void iterate_messages() {
     }
 }
 
-// TODO: Revisit better error handling
-// TODO: Check if link is downloadable image beforehand
-// TODO: Add support for links
-// TODO: Add support for titles
+// TODO: Revisit error handling
 // TODO: Create benchmark pipeline
 // TODO: Add support for import
 // TODO: Add support for replies report

@@ -36,13 +36,17 @@ public:
 
     std::shared_ptr<RowResult> get_image_rows();
 
+    std::shared_ptr<RowResult> get_link_rows();
+
+    std::shared_ptr<RowResult> get_title_rows(int minTitleLength);
+
     void switch_subreddit(std::string sub) {
         this->subreddit = std::move(sub);
     }
 
-   void update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value);
+    void update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value);
 
-   void add_settings_row(const std::string& sub);
+    void add_settings_row(const std::string& sub);
 };
 
 

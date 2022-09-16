@@ -11,6 +11,9 @@
 using namespace cv;
 using namespace std;
 
+double get_string_similarity(const std::string &first, const std::string &second);
+int getEditDistance(const std::string &first, const std::string& second);
+
 class Image {
 public:
    Mat matrix;
@@ -24,14 +27,12 @@ public:
    [[nodiscard]] mpz_class getHash10x10() { return hash10x10; };
    [[nodiscard]] mpz_class getHash8x8() { return hash8x8; }
    // Used for OCR text and title comparison
-   double get_string_similarity(const std::string &first, const std::string &second);
    void extract_text();
    [[nodiscard]] std::string get_text() const { return ocrText; }
    cv::Size get_dimensions();
 
 private:
-   // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
-   int getEditDistance(const std::string &first, const std::string& second);
+
 
 
    mpz_class hash10x10;

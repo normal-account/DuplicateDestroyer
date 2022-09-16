@@ -33,7 +33,7 @@ Submission::Submission( json data )
             }
         }
     }
-    else if (is_video()) {
+    else if (data[ "is_video" ] || is_video()) {
         type = VIDEO;
         url = data[ "thumbnail" ];
     }
