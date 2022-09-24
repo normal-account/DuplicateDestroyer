@@ -17,6 +17,8 @@ public:
 
    cpr::Response fetch_submissions();
 
+   cpr::Response fetch_top_submissions(const std::string &sub, const std::string &range);
+
    cpr::Response fetch_token();
 
    void set_token( std::string newToken );
@@ -27,9 +29,9 @@ public:
 
    void download_image( const std::string &url );
 
-   void submit_comment( const std::string &content, const std::string &id );
+   std::string submit_comment( const std::string &content, const std::string &id );
 
-   void unsave_submission( const std::string &id );
+   void save_submission( const std::string &id );
 
    void report_submission( const std::string &id );
 

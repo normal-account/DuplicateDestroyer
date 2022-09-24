@@ -20,7 +20,6 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
     return hashes;
 }
 
-
 std::shared_ptr<RowResult> db_interface::get_image_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
@@ -64,12 +63,17 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_8x8_hashes()
     return get_hashes("8pxhash");
 }
 
-
 std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 {
     return get_hashes("10pxhash");
 }
 
+bool db_interface::subreddit_table_exists( const std::string &sub )
+{
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(sub, true);
+    return table.existsInDatabase();
+}
 
 mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
     auto db = session.getSchema("all_reposts");
@@ -77,7 +81,6 @@ mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) 
     std::string where = "subreddit = '" + name + "'";
     auto row = table.select("*").where(where).execute();
     assert(row.count());
-
     return row;
 }
 

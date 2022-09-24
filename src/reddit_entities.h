@@ -27,6 +27,7 @@ public:
    std::string fullname;
    std::string id;
    long long int created;
+   bool saved;
 
    TYPE type;
    bool isGallery;

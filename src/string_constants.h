@@ -53,6 +53,14 @@ const std::string ERROR_NOT_FROM_SUB = "**ERROR** : Setting messages need to be 
 
 const std::string UPDATE_SUCCESS_MSG = "Subreddit settings have been successfully updated.";
 
+const std::string MODMAIL_FOOTER_1 = "I am a bot. If you believe this was sent in error, [please message the subreddit moderators here]"
+                                   "(https://www.reddit.com/message/compose?to=%2Fr%2F";
+// Subreddit between
+const std::string MODMAIL_FOOTER_2 = "&subject=My+post+has+been+wrongfully+removed&message=My%20post%20has%20been%20wrongfully%20removed%20by%20your%20repost%20bot,%20/u/"
+                                   "DuplicateDestroyer.%20Here%20is%20a%20link%20to%20my%20post:%20https%3A%2F%2Fredd.it%2F";
+// Submission shortlink between
+const std::string MODMAIL_FOOTER_3 = "). **Do not delete your post or moderators won't be able to review it.**";
+
 const char *const SETTINGS_STRING = "Current subreddit settings :\n\n    enabled : %s\n    remove_threshold: %s\n    report_threshold: %s\n    enforce_videos: %s\n"
                                     "    enforce_images: %s\n    enforce_links: %s\n    time_range: %s\n    report_links: %s\n    report_replies: %s\n"
                                     "    enforce_titles: %s\n    title_remove_threshold: %s\n    title_report_threshold: %s\n    min_title_length_to_enforce: %s\n"

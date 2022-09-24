@@ -130,6 +130,12 @@ std::string create_title_markdown_row( int number, Row &row, long long submissio
            std::to_string(similarity) + "%](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
 }
 
+std::string get_comment_fullname(const std::string &query) {
+    std::string fullname = "t1_";
+    fullname.append(json::parse(query)["data"]["things"][0]["id"]);
+    return fullname;
+}
+
 bool search_image_duplicates( Submission &submission, SubredditSetting &settings, Image &image) {
     std::string commentContent;
     mpz_class hash; mpz_class mpzhash;
@@ -176,12 +182,15 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
                 commentContent.append(str);
             commentContent.append( FOOTER_REMOVE);
             apiWrapper.remove_submission(submission.fullname);
+            apiWrapper.submit_comment(commentContent, submission.fullname);
         } else if (!reportComment.empty()) {
             for (const auto &str : reportComment)
                 commentContent.append(str);
             apiWrapper.report_submission(submission.fullname);
+
+            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
+            apiWrapper.remove_submission(commentFullname);
         }
-        apiWrapper.submit_comment(commentContent, submission.fullname);
     }
 
     return numberDuplicates > 0;
@@ -201,7 +210,6 @@ void process_image(Image &image, const std::string &url) {
     image.computeHash8x8();
     image . computeHash10x10();
 }
-
 
 bool handle_image(Submission &submission, SubredditSetting &settings, const std::string &url) {
     Image image;
@@ -239,13 +247,15 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
         if (!settings.report_links) {
             commentContent.append(FOOTER_REMOVE);
             apiWrapper.report_submission(submission.fullname);
+            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
+            apiWrapper.remove_submission(commentFullname);
         }
         else
         {
             commentContent = HEADER_REMOVE_LINK + commentContent;
             apiWrapper . remove_submission( submission . fullname );
+            apiWrapper.submit_comment(commentContent, submission.fullname);
         }
-        apiWrapper.submit_comment(commentContent, submission.fullname);
     }
     else
         interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
@@ -286,11 +296,52 @@ void handle_title(Submission &submission, SubredditSetting &settings) {
                 commentContent.append(str);
             commentContent.append(FOOTER_REMOVE);
             apiWrapper.remove_submission(submission.fullname);
+            apiWrapper.submit_comment(commentContent, submission.fullname);
         }
         else if (!reportComment.empty()) {
             for (const auto &str : reportComment)
                 commentContent.append(str);
             apiWrapper.report_submission(submission.fullname);
+            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
+            apiWrapper.remove_submission(commentFullname);
+        }
+    }
+}
+
+void import_submissions(const std::string &subreddit) {
+    if (!interface.subreddit_table_exists(subreddit))
+        return;
+
+    for (const std::string &range : {"month", "year", "all"}) {
+        cpr::Response submissionQuery = apiWrapper.fetch_top_submissions(subreddit, range);
+
+        json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
+
+        for (auto &submissionIter : submissionList) {
+            Submission submission(submissionIter[ "data" ]);
+            if (submission.saved)
+                continue;
+            else
+                apiWrapper.save_submission(submission.fullname);
+
+            interface.switch_subreddit(submission.subreddit);
+
+            if (submission.type == IMAGE || submission.type == VIDEO) {
+                Image image; // TODO: Code repeated here... figure out a way to plug-in a function
+                if (submission.isGallery) {
+                    for (const std::string &url : submission.galleryUrls)
+                    {
+                        process_image(image, url);
+                        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+                    }
+                } else {
+                    process_image(image, submission.url);
+                    interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
+                }
+            }
+            else {
+                interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+            }
         }
     }
 }
@@ -303,12 +354,18 @@ void iterate_submissions() {
     for ( auto submissionIter = submissionList.begin(); submissionIter != submissionList.end(); submissionIter++)
     {
         Submission submission(submissionIter.value()[ "data" ]);
+        if (submission.saved)
+            continue;
+        else
+            apiWrapper.save_submission(submission.fullname);
+
         interface.switch_subreddit(submission.subreddit);
         RowResult settingsQuery = interface.get_subreddit_settings(submission.subreddit);
         SubredditSetting settings(settingsQuery);
 
         bool submissionRemoved = false;
 
+        // 1 - Submission is a media
         if ( (submission.type == IMAGE && settings.enforce_images) || (submission.type == VIDEO && settings.enforce_videos) )
         {
             if ( submission . isGallery )
@@ -317,11 +374,12 @@ void iterate_submissions() {
                     submissionRemoved = handle_image( submission, settings, url );
             } else
                 submissionRemoved = handle_image( submission, settings, submission . url );
-        }
-        else if (settings.enforce_links) // submission is a link
+        } // 2 - submission is a link
+        else if (settings.enforce_links)
             submissionRemoved = handle_link(submission, settings);
 
-        if (!submissionRemoved && settings.enforce_titles) { // Submission is a link/image/video and no duplicates exist ->  search for titles
+        // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
+        if (!submissionRemoved && settings.enforce_titles) {
             handle_title(submission, settings);
         }
     }
@@ -357,6 +415,20 @@ void iterate_messages() {
     for ( auto messageIter = messageList.begin(); messageIter != messageList.end(); messageIter++) {
         Message message(messageIter.value());
         apiWrapper.mark_message_as_read(message.fullname);
+
+        if (message.isReply) {
+            RowResult settingsQuery = interface.get_subreddit_settings(message.subreddit.value());
+            SubredditSetting settings(settingsQuery);
+            if (settings.report_replies)
+                apiWrapper.report_submission(message.fullname); // TODO : Check if it works
+            else {
+                std::string modmailContent;
+                modmailContent.append(MODMAIL_FOOTER_1).append(message.subreddit.value()).append(MODMAIL_FOOTER_2).append(message.id);
+                apiWrapper.submit_comment(modmailContent, message.fullname);
+            }
+            continue;
+        }
+
         if (!message.subreddit.has_value()) {
             apiWrapper.submit_comment(ERROR_NOT_FROM_SUB, message.fullname);
             continue;
@@ -365,6 +437,7 @@ void iterate_messages() {
         if (message.subject.starts_with("invitation to moderate")) {
             std::string subreddit = get_last_word(message.subject);
             interface.add_settings_row(subreddit.substr(3, subreddit.size())); // Remove the "/r/"
+            import_submissions(subreddit);
             apiWrapper.accept_invite(subreddit);
             continue;
         }
@@ -406,13 +479,17 @@ void iterate_messages() {
 
 // TODO: Revisit error handling
 // TODO: Create benchmark pipeline
-// TODO: Add support for import
-// TODO: Add support for replies report
 // TODO: Add handling of ratelimit
+// TODO: Handle token refresh
+// TODO: Fragment iterate_messages
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
 int main()
 {
     initializeToken();
+    std::cout << "going" << std::endl;
+    apiWrapper.submit_comment("test", "t3_x07ae7");
+    exit(0);
+
     initializeTesseract();
 
     try {

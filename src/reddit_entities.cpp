@@ -19,6 +19,7 @@ Submission::Submission( json data )
     shortlink = "https://redd.it/";
     shortlink.append(id);
     url = data[ "url" ];
+    saved = data[ "saved" ];
     if (is_image()) {
         type = IMAGE;
         if (isGallery) {

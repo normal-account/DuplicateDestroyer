@@ -7,9 +7,11 @@
 
 #define HEADERS cpr::Header{{"Authorization", token}}, cpr::VerifySsl(false), cpr::UserAgent(USER_AGENT))
 #define HANDLE_STATUS if (query.status_code != 200) throw
+#define HANDLE_RATELIMIT if (stoi(query.header["X-Ratelimit-Remaining"]) == 0) { sleep(stoi(query.header["x-ratelimit-reset"])); std::cerr << "SLEPT" << std::endl; }
 // Should be done only once the original token expires.
 void ApiWrapper::refresh_token()
 {
+
     cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
                                              cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ",
                                                                  "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
@@ -19,14 +21,16 @@ void ApiWrapper::refresh_token()
                                              cpr::UserAgent( USER_AGENT )
     );
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
-void ApiWrapper::unsave_submission( const std::string &id )
+void ApiWrapper::save_submission( const std::string &fullname )
 {
-    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/unsave"},
-                                          cpr::Parameters{{"id", "t3_hivul7"},},
+    cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/save"},
+                                     cpr::Parameters{{"id", fullname},},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 void ApiWrapper::send_message( const std::string &user, const std::string &content, const std::string &subject )
@@ -37,6 +41,7 @@ void ApiWrapper::send_message( const std::string &user, const std::string &conte
                                                           {"to",      user}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 
@@ -46,6 +51,7 @@ void ApiWrapper::mark_message_as_read( const std::string &fullname )
                                           cpr::Parameters{{"id", fullname}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 
@@ -57,6 +63,7 @@ void ApiWrapper::remove_submission( const std::string &fullname )
                                                      {"spam", "false"}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 void ApiWrapper::report_submission( const std::string &fullname )
@@ -67,6 +74,7 @@ void ApiWrapper::report_submission( const std::string &fullname )
                                                      {"api_type", "json"}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 
@@ -77,6 +85,19 @@ cpr::Response ApiWrapper::fetch_submissions()
                                      {"limit", "1"}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
+    return query;
+}
+
+cpr::Response ApiWrapper::fetch_top_submissions(const std::string &sub, const std::string &range)
+{
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/top"},
+                           cpr::Parameters{{"g",     "GLOBAL"},
+                                           {"limit", "100"},
+                                           {"t", range}},
+    HEADERS;
+    HANDLE_STATUS;
+    HANDLE_RATELIMIT;
     return query;
 }
 
@@ -88,10 +109,11 @@ cpr::Response ApiWrapper::fetch_messages()
                                      {"limit", "1"}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
     return query;
 }
 
-void ApiWrapper::submit_comment( const std::string &content, const std::string &id )
+std::string ApiWrapper::submit_comment( const std::string &content, const std::string &id )
 {
     auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/comment"},
                             cpr::Parameters{{"api_type",      "json"},
@@ -99,8 +121,10 @@ void ApiWrapper::submit_comment( const std::string &content, const std::string &
                                             {"thing_id",      id},
                                             {"return_rtjson", "false"}},
     HEADERS;
+
     HANDLE_STATUS;
-    // TODO: Return comment id
+    HANDLE_RATELIMIT;
+    return query.text;
 }
 
 
@@ -110,6 +134,7 @@ void ApiWrapper::accept_invite( const std::string &subreddit )
                             cpr::Parameters{{"api_type", "json"}},
     HEADERS;
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
 }
 
 
@@ -121,6 +146,7 @@ void ApiWrapper::download_image( const std::string &url )
                                          cpr::UserAgent( USER_AGENT ));
 
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
     std::ofstream tempFile( IMAGE_NAME );
     tempFile << query . text;
 }
@@ -139,6 +165,7 @@ cpr::Response ApiWrapper::fetch_token()
                                             cpr::UserAgent( USER_AGENT )
     );
     HANDLE_STATUS;
+    HANDLE_RATELIMIT;
     return query;
 }
 
