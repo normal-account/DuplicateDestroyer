@@ -11,6 +11,12 @@ db_interface interface( (Session("localhost", 33060, "db_user", "soleil")));
 
 using namespace ::mysqlx;
 
+unsigned long long get_unix_time() {
+    const auto currentTime = std::chrono::system_clock::now();
+    const auto currentTimeUnix = std::chrono::duration_cast<std::chrono::seconds>(currentTime.time_since_epoch()).count();
+    return currentTimeUnix;
+}
+
 // Should be done only once the original token expires.
 void initializeToken()
 {
@@ -19,6 +25,8 @@ void initializeToken()
     std::string ogToken = "bearer ";
     ogToken . append( jsonToken[ "access_token" ] );
     apiWrapper.set_token( ogToken );
+    int expiresIn = jsonToken["expires_in"];
+    apiWrapper.set_time_expire(get_unix_time() + expiresIn);
 }
 
 void destroyTesseract() {
@@ -483,13 +491,11 @@ void iterate_messages() {
 
 // TODO: Revisit error handling
 // TODO: Create benchmark pipeline
-// TODO: Handle token refresh
-// TODO: Fix bug with hashes changing
-// TODO: Fragment iterate_messages
-//std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
+// TODO: Fragment iterate_messages method
 int main()
 {
-    initializeToken();
+    if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
+        initializeToken();
     initializeTesseract();
 
     try {
@@ -498,12 +504,6 @@ int main()
     } catch (std::exception &e) {
         std::cout << e.what() << std::endl;
     }
-    exit(0);
-
-    /* <-- SUBMISSIONS --> */
-
-    /* <-- MESSAGES --> */
-
 
     return 0;
 }

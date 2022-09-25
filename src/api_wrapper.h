@@ -9,6 +9,7 @@
 class ApiWrapper
 {
    std::string token;
+   unsigned long long timeToExpire = 0;
 
 public:
    void send_message( const std::string &user, const std::string &content, const std::string &subject );
@@ -21,9 +22,11 @@ public:
 
    cpr::Response fetch_token();
 
-   void set_token( std::string newToken );
+   void set_token( const std::string &newToken );
 
-   void refresh_token();
+   void set_time_expire ( unsigned long long unixTime );
+
+   unsigned long long get_time_expire();
 
    cpr::Response fetch_messages();
 

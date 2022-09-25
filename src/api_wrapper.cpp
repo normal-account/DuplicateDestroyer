@@ -8,21 +8,7 @@
 #define HEADERS cpr::Header{{"Authorization", token}}, cpr::VerifySsl(false), cpr::UserAgent(USER_AGENT))
 #define HANDLE_STATUS if (query.status_code != 200) throw
 #define HANDLE_RATELIMIT if (stoi(query.header["X-Ratelimit-Remaining"]) == 0) { sleep(stoi(query.header["x-ratelimit-reset"])); std::cerr << "SLEPT" << std::endl; }
-// Should be done only once the original token expires.
-void ApiWrapper::refresh_token()
-{
 
-    cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                                             cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ",
-                                                                 "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
-                                             cpr::Parameters{{"grant_type",    "refresh_token"},
-                                                             {"refresh_token", token}},
-                                             cpr::VerifySsl( false ),
-                                             cpr::UserAgent( USER_AGENT )
-    );
-    HANDLE_STATUS;
-    HANDLE_RATELIMIT;
-}
 
 void ApiWrapper::save_submission( const std::string &fullname )
 {
@@ -69,9 +55,10 @@ void ApiWrapper::remove_submission( const std::string &fullname )
 void ApiWrapper::report_submission( const std::string &fullname )
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/report"},
-                                     cpr::Parameters{{"id", fullname},
-                                                     {"reason", "false"},
-                                                     {"api_type", "json"}},
+                                     cpr::Parameters{{"thing_id", fullname},
+                                                     {"reason", "Found duplicate(s) - check pinned comment."},
+                                                     {"api_type", "json"},
+                                                     {"custom_text", "true"}},
     HEADERS;
     HANDLE_STATUS;
     HANDLE_RATELIMIT;
@@ -156,16 +143,27 @@ cpr::Response ApiWrapper::fetch_token()
                                             cpr::Parameters{{"grant_type", "password"},
                                                             {"username",   "Im_a_Necrophiliac"},
                                                             {"password",   "soleil"},
-                                                            {"code",       "8P8dRN4wS299Vy-K3_177uO7t8DIMw#_"}},
+                                                            },
                                             cpr::VerifySsl( 0 ),
                                             cpr::UserAgent( USER_AGENT )
     );
     HANDLE_STATUS;
     HANDLE_RATELIMIT;
+
     return query;
 }
 
-void ApiWrapper::set_token( std::string newToken )
+void ApiWrapper::set_token( const std::string &newToken )
 {
-    token = std::move( newToken );
+    token = newToken ;
+}
+
+void ApiWrapper::set_time_expire( unsigned long long unixTime )
+{
+    timeToExpire = unixTime;
+}
+
+unsigned long long ApiWrapper::get_time_expire()
+{
+    return timeToExpire;
 }

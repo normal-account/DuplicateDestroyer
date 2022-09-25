@@ -10,7 +10,7 @@ void Image::computeHash10x10()
     Mat matrix10px;
 
     //cv::
-    cv::resize( matrix, matrix10px, {10, 10} );
+    cv::resize( matrix, matrix10px, {11, 11} ); // Previously 10x10
     cvtColor( matrix10px, matrix10px, cv::COLOR_BGR2GRAY );
 
     mpz_class differenceHash{0};
@@ -32,16 +32,16 @@ void Image::computeHash10x10()
         {
             differenceHash <<= 1;
             pixel = matrix10px . at<uchar>( row, col );
-
+            //std::cout << "Pixel (" << row << ", " << col << ") => " << (int)pixel << " with diff hash => " << differenceHash << std::endl;
             differenceHash |= 1 * ( pixel >= previousPixel );
 
             previousPixel = pixel;
         }
     }
+    std::cout << "Final hash => " << differenceHash << std::endl;
     this->hash10x10 = differenceHash;
 }
 
-// No precision loss on this method considering the much smaller hash.
 void Image::computeHash8x8()
 {
     Mat matrix8px;
@@ -54,7 +54,7 @@ void Image::computeHash8x8()
 
     uchar pixel, previousPixel = matrix8px . at<uchar>( 7, 0 );
 
-    for ( int row = 0; row < 8; row += 2 )
+    for ( int row = 0; row < 5; row += 2 ) // Previously 8
     {
         for ( int col = 0; col < 8; col++ )
         {
