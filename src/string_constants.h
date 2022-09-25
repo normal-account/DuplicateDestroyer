@@ -26,13 +26,13 @@
 #define SS_REMOVE_TABLE_DUPLICATE_INT 15
 #define SS_OCR_TEXT_THRESHOLD 16
 
-const std::string HEADER_REMOVE_IMAGE = "**Your submission has been removed because it has been posted on the subreddit recently.**";
+const std::string HEADER_REMOVE_IMAGE = "**Your submission has been removed because it has been posted on the subreddit recently.**\n\n";
 
 const std::string HEADER_REMOVE_LINK = "**Your submission has been removed because at least 1 submission with the same URL has posted on the subreddit recently.**";
 
 const std::string HEADER_REMOVE_TITLE = "**Your submission has been removed because at least 1 submission with the same title has posted on the subreddit recently.**";
 
-const std::string FOOTER_REMOVE = "I am a bot. If you believe this was sent in error, reply to this comment and a"
+const std::string FOOTER_REMOVE = "\n\nI am a bot. If you believe this was sent in error, reply to this comment and a"
                                         " moderator will review your post. **Do not delete your post or moderators won't be able to review it.**";
 
 /*const std::string FOOTER_REMOVE_IMAGE_2 = "I am a bot. If you believe this was sent in error, [please message the subreddit moderators here]"

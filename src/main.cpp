@@ -130,9 +130,10 @@ std::string create_title_markdown_row( int number, Row &row, long long submissio
            std::to_string(similarity) + "%](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
 }
 
-std::string get_comment_fullname(const std::string &query) {
+std::string get_comment_fullname(const cpr::Response &query) {
     std::string fullname = "t1_";
-    fullname.append(json::parse(query)["data"]["things"][0]["id"]);
+    json parsedQuery = json::parse(query.text);
+    fullname.append(parsedQuery["json"]["data"]["things"][0]["data"]["id"]);
     return fullname;
 }
 
@@ -359,9 +360,12 @@ void iterate_submissions() {
         else
             apiWrapper.save_submission(submission.fullname);
 
-        interface.switch_subreddit(submission.subreddit);
         RowResult settingsQuery = interface.get_subreddit_settings(submission.subreddit);
         SubredditSetting settings(settingsQuery);
+        if (!settings.enabled)
+            continue;
+
+        interface.switch_subreddit(submission.subreddit);
 
         bool submissionRemoved = false;
 
@@ -479,17 +483,13 @@ void iterate_messages() {
 
 // TODO: Revisit error handling
 // TODO: Create benchmark pipeline
-// TODO: Add handling of ratelimit
 // TODO: Handle token refresh
+// TODO: Fix bug with hashes changing
 // TODO: Fragment iterate_messages
 //std::cout << submissionQuerySTR.header["X-Ratelimit-Remaining"] << std::endl;
 int main()
 {
     initializeToken();
-    std::cout << "going" << std::endl;
-    apiWrapper.submit_comment("test", "t3_x07ae7");
-    exit(0);
-
     initializeTesseract();
 
     try {

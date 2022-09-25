@@ -23,7 +23,7 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
 std::shared_ptr<RowResult> db_interface::get_image_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto query = table.select("*").where("'8pxhash' is not null and '10pxhash' is not null and 'ocr_string' is not null");
     return std::make_shared<RowResult>(query.execute());
 }
 
@@ -71,7 +71,7 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
 bool db_interface::subreddit_table_exists( const std::string &sub )
 {
     auto db = session.getSchema("all_reposts");
-    auto table = db.getTable(sub, true);
+    auto table = db.getTable(sub, false);
     return table.existsInDatabase();
 }
 

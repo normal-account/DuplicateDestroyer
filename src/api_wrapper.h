@@ -29,7 +29,7 @@ public:
 
    void download_image( const std::string &url );
 
-   std::string submit_comment( const std::string &content, const std::string &id );
+   cpr::Response submit_comment( const std::string &content, const std::string &id );
 
    void save_submission( const std::string &id );
 

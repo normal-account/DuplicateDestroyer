@@ -20,26 +20,29 @@ Submission::Submission( json data )
     shortlink.append(id);
     url = data[ "url" ];
     saved = data[ "saved" ];
-    if (is_image()) {
+    if (isGallery) {
         type = IMAGE;
-        if (isGallery) {
-            json urlList = data["media_metadata"];
-            for ( auto urlIter = urlList.begin(); urlIter != urlList.end(); urlIter++) {
-                std::string submissionID = urlIter.value()["id"];
-                std::string fileType = urlIter.value()["m"]; // e.g. for a PNG, "m" gives "image/jpg"
-                fileType = fileType.substr(6, fileType.size() - 6); // Extracting only the datatype (excluding 'image/')
-                std::string constructedURL;
-                constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( fileType );
-                galleryUrls.push_back(constructedURL);
-            }
+        json urlList = data["media_metadata"];
+        for ( auto urlIter = urlList.begin(); urlIter != urlList.end(); urlIter++) {
+            std::string submissionID = urlIter.value()["id"];
+            std::string fileType = urlIter.value()["m"]; // e.g. for a PNG, "m" gives "image/jpg"
+            fileType = fileType.substr(6, fileType.size() - 6); // Extracting only the datatype (excluding 'image/')
+            std::string constructedURL;
+            constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( fileType );
+            galleryUrls.push_back(constructedURL);
         }
+    } else
+    {
+        if ( is_image())
+        {
+            type = IMAGE;
+        } else if ( data[ "is_video" ] || is_video())
+        {
+            type = VIDEO;
+            url = data[ "thumbnail" ];
+        } else
+            type = LINK;
     }
-    else if (data[ "is_video" ] || is_video()) {
-        type = VIDEO;
-        url = data[ "thumbnail" ];
-    }
-    else
-        type = LINK;
 }
 
 bool Submission::is_image()

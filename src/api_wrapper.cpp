@@ -85,7 +85,6 @@ cpr::Response ApiWrapper::fetch_submissions()
                                      {"limit", "1"}},
     HEADERS;
     HANDLE_STATUS;
-    HANDLE_RATELIMIT;
     return query;
 }
 
@@ -97,7 +96,6 @@ cpr::Response ApiWrapper::fetch_top_submissions(const std::string &sub, const st
                                            {"t", range}},
     HEADERS;
     HANDLE_STATUS;
-    HANDLE_RATELIMIT;
     return query;
 }
 
@@ -109,11 +107,10 @@ cpr::Response ApiWrapper::fetch_messages()
                                      {"limit", "1"}},
     HEADERS;
     HANDLE_STATUS;
-    HANDLE_RATELIMIT;
     return query;
 }
 
-std::string ApiWrapper::submit_comment( const std::string &content, const std::string &id )
+cpr::Response ApiWrapper::submit_comment( const std::string &content, const std::string &id )
 {
     auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/comment"},
                             cpr::Parameters{{"api_type",      "json"},
@@ -124,7 +121,7 @@ std::string ApiWrapper::submit_comment( const std::string &content, const std::s
 
     HANDLE_STATUS;
     HANDLE_RATELIMIT;
-    return query.text;
+    return query;
 }
 
 
@@ -146,7 +143,6 @@ void ApiWrapper::download_image( const std::string &url )
                                          cpr::UserAgent( USER_AGENT ));
 
     HANDLE_STATUS;
-    HANDLE_RATELIMIT;
     std::ofstream tempFile( IMAGE_NAME );
     tempFile << query . text;
 }
