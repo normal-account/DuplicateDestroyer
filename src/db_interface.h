@@ -49,6 +49,8 @@ public:
     void update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value);
 
     void add_settings_row(const std::string& sub);
+
+    void create_table(const std::string &sub);
 };
 
 

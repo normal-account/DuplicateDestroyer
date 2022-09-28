@@ -41,4 +41,8 @@ public:
    void accept_invite( const std::string &subreddit );
 
    void mark_message_as_read( const std::string &fullname );
+
+   void distinguish_comment( const std::string &fullname);
+
+   cpr::Response subreddit_exists(const std::string &sub);
 };

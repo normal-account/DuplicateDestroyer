@@ -38,7 +38,6 @@ void Image::computeHash10x10()
             previousPixel = pixel;
         }
     }
-    std::cout << "Final hash => " << differenceHash << std::endl;
     this->hash10x10 = differenceHash;
 }
 
@@ -106,6 +105,7 @@ void Image::extract_text()
     tessBaseApi->SetImage( pix);
     outText = tessBaseApi->GetUTF8Text();
     ocrText = outText;
+    std::cout << "Text = " << ocrText << std::endl;
     delete outText;
 }
 

@@ -9,7 +9,7 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
     auto hashes = std::make_shared<std::vector<mpz_class>>();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select(/*hash_type*/"*").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto query = table.select(/*hash_type*/"*").where("'8pxhash' is not null and '10pxhash' is not null and 'ocr_string' is not null");
 
     auto result = query.execute().begin().operator*().get(0);
     for (const auto& it : result) {
@@ -30,7 +30,7 @@ std::shared_ptr<RowResult> db_interface::get_image_rows() {
 std::shared_ptr<RowResult> db_interface::get_link_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*").where("is_link = 1");
+    auto query = table.select("*").where("'is_link' = 1");
     return std::make_shared<RowResult>(query.execute());
 }
 
@@ -46,7 +46,10 @@ void db_interface::insert_submission( const std::string &ocrtext, const std::str
 {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
+    if (ocrtext.size() > 300)
+        table.insert().values(ocrtext.substr(0, 300), tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
+    else
+        table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
 }
 
 std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
@@ -54,7 +57,7 @@ std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
     auto db = session.getSchema("all_reposts");
     auto ocr_strings = std::make_shared<std::vector<std::string>>();
     auto table = db.getTable(subreddit);
-    auto query = table.select("ocr_hash").where("8pxhash is not null and 10pxhash is not null and ocr_string is not null");
+    auto query = table.select("ocr_hash").where("'8pxhash' is not null and '10pxhash' is not null and 'ocr_string' is not null");
     return ocr_strings;
 }
 
@@ -75,9 +78,29 @@ bool db_interface::subreddit_table_exists( const std::string &sub )
     return table.existsInDatabase();
 }
 
+
+// WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call
+void db_interface::create_table( const std::string &sub )
+{
+    session.sql("use all_reposts").execute(); // Required
+    session.sql("create table " + sub + " ("
+                "ocrstring varchar(300),"
+                "10pxhash varchar(150),"
+                "8pxhash varchar(100),"
+                "id varchar(10),"
+                "author varchar(50),"
+                "dimensions varchar(30),"
+                "date int(11),"
+                "is_video boolean,"
+                "title varchar(301),"
+                "url varchar(300)"
+                ");").execute();
+}
+
 mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
+
     std::string where = "subreddit = '" + name + "'";
     auto row = table.select("*").where(where).execute();
     assert(row.count());
@@ -98,8 +121,6 @@ void db_interface::add_settings_row( const std::string &sub )
     // TODO : Revisit default values
     table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 0, 0, 85, 95, 10, 5, 80).execute();
 }
-
-
 
 
 

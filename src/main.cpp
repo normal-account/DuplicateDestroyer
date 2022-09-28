@@ -112,7 +112,7 @@ std::string create_image_markdown_row( int number, int similarity, Row &row, lon
     auto title = row.get(DB_TITLE).get<std::string>();
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
-           + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](https://" + url + ") | "
+           + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
            + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
 }
 
@@ -145,6 +145,45 @@ std::string get_comment_fullname(const cpr::Response &query) {
     return fullname;
 }
 
+std::string submit_comment(const std::string &content, const std::string &fullname) {
+    auto query = apiWrapper.submit_comment(content, fullname);
+    std::string commentFullname = get_comment_fullname(query);
+    apiWrapper.distinguish_comment(commentFullname);
+    return commentFullname;
+}
+
+bool determine_remove(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
+    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 80)
+    || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 80 && imageSimilarity > 50)
+    || (textSimilarity > 65 && imageSimilarity >= imageThreshold)
+    || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
+}
+// this is a test with about 35 chars !
+bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
+    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 80)
+           || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 80 && imageSimilarity > 70)
+           || (textSimilarity > 65 && imageSimilarity >= imageThreshold)
+           || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
+}
+
+void post_action_comment( std::string commentContent, const std::vector<std::string> &removeComment, const std::vector<std::string> &reportComment,
+                          const Submission &submission, const std::string &HEADER) {
+    if (!removeComment.empty()) {
+        commentContent = HEADER + commentContent;
+        for (const auto &str : removeComment)
+            commentContent.append(str);
+        commentContent.append( FOOTER_REMOVE );
+        apiWrapper.remove_submission(submission.fullname);
+        submit_comment(commentContent, submission.fullname);
+    } else if (!reportComment.empty()) {
+        for (const auto &str : reportComment)
+            commentContent.append(str);
+        apiWrapper.report_submission(submission.fullname);
+        std::string commentFullname = submit_comment(commentContent, submission.fullname);
+        apiWrapper.remove_submission(commentFullname);
+    }
+}
+
 bool search_image_duplicates( Submission &submission, SubredditSetting &settings, Image &image) {
     std::string commentContent;
     mpz_class hash; mpz_class mpzhash;
@@ -163,43 +202,36 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
         if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
-        if (imageOcrString.size() > 5 && get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString) < settings.ocr_text_threshold )
-            continue;
+        double strSimilarity = get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString);
+
+        std::cout << "String Similarity = " << strSimilarity << std::endl;
 
         std::string strhash = row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
+        std::cout << image.ocrText << std::endl;
         int similarity = image.compareHash10x10( mpzhash );
-        if (similarity > settings.remove_threshold) {
+
+        std::cout << "10x10 sim : " << similarity << std::endl;
+
+        if (determine_remove(similarity, settings.remove_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
-        } else if (removeComment.empty()){
+        } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
             strhash = row.get(DB_8PXHASH).get<std::string>();
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
-            if (similarity > settings.remove_threshold) {
+
+            std::cout << "8x8 sim : " << similarity << std::endl;
+
+            if (determine_report(similarity, settings.report_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
             }
         }
-
     }
 
     if (numberDuplicates > 0) {
-        if (!removeComment.empty()) {
-            commentContent = HEADER_REMOVE_IMAGE + commentContent;
-            for (const auto &str : removeComment)
-                commentContent.append(str);
-            commentContent.append( FOOTER_REMOVE);
-            apiWrapper.remove_submission(submission.fullname);
-            apiWrapper.submit_comment(commentContent, submission.fullname);
-        } else if (!reportComment.empty()) {
-            for (const auto &str : reportComment)
-                commentContent.append(str);
-            apiWrapper.report_submission(submission.fullname);
-
-            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
-            apiWrapper.remove_submission(commentFullname);
-        }
+        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_IMAGE);
     }
 
     return numberDuplicates > 0;
@@ -219,6 +251,7 @@ void process_image(Image &image, const std::string &url) {
     image.computeHash8x8();
     image . computeHash10x10();
 }
+
 
 bool handle_image(Submission &submission, SubredditSetting &settings, const std::string &url) {
     Image image;
@@ -256,14 +289,14 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
         if (!settings.report_links) {
             commentContent.append(FOOTER_REMOVE);
             apiWrapper.report_submission(submission.fullname);
-            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
+            std::string commentFullname = submit_comment(commentContent, submission.fullname);
             apiWrapper.remove_submission(commentFullname);
         }
         else
         {
             commentContent = HEADER_REMOVE_LINK + commentContent;
             apiWrapper . remove_submission( submission . fullname );
-            apiWrapper.submit_comment(commentContent, submission.fullname);
+            submit_comment(commentContent, submission.fullname);
         }
     }
     else
@@ -300,20 +333,7 @@ void handle_title(Submission &submission, SubredditSetting &settings) {
         }
     }
     if (numberDuplicates > 0) {
-        if (!removeComment.empty()) {
-            for (const auto &str : removeComment)
-                commentContent.append(str);
-            commentContent.append(FOOTER_REMOVE);
-            apiWrapper.remove_submission(submission.fullname);
-            apiWrapper.submit_comment(commentContent, submission.fullname);
-        }
-        else if (!reportComment.empty()) {
-            for (const auto &str : reportComment)
-                commentContent.append(str);
-            apiWrapper.report_submission(submission.fullname);
-            std::string commentFullname = get_comment_fullname(apiWrapper.submit_comment(commentContent, submission.fullname));
-            apiWrapper.remove_submission(commentFullname);
-        }
+        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_TITLE);
     }
 }
 
@@ -391,7 +411,7 @@ void iterate_submissions() {
             submissionRemoved = handle_link(submission, settings);
 
         // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
-        if (!submissionRemoved && settings.enforce_titles) {
+        if (!submissionRemoved && settings.enforce_titles && submission.title.size() >= settings.min_title_length_to_enforce) {
             handle_title(submission, settings);
         }
     }
@@ -420,6 +440,50 @@ std::string get_subreddit_settings_list(const std::string &sub) {
     return formattedSettings;
 }
 
+bool subreddit_exists(const std::string &sub) {
+    if (sub.size() > 50 || sub.size() < 2)
+        return false;
+    auto query = apiWrapper.subreddit_exists(sub);
+    auto json = json::parse(query.text);
+    return !json["subreddits"].empty();
+}
+
+void parse_subreddit_settings(const Message &message) {
+    std::stringstream messageStream(message.body);
+    std::string parameter; std::string value;
+    std::string successes; std::string failures;
+    std::string response;
+    while (messageStream && messageStream.tellg() != -1) {
+        messageStream >> parameter;
+        if (BOOLEAN_SETTINGS.contains(parameter)) {
+            messageStream >> value;
+            if (value == "true" || value == "false") {
+                interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value == "true" ? "1" : "0");
+                successes.append("`").append(parameter).append("`,"); // Create & format list of successful boolean parameters
+            } else
+            {
+                failures.append("`").append(parameter).append("`,");
+            }
+        }
+
+        else if (INT_SETTINGS.contains(parameter)) {
+            messageStream >> value;
+            if (is_number(value)) {
+                interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value);
+                successes.append("`").append(parameter).append("`,"); // Create & format list of successful int parameters
+            } else {
+                failures.append("`").append(parameter).append("`,");
+            }
+        }
+    }
+    if (!successes.empty())
+        response.append(UPDATE_SUCCESS).append(successes.substr(0, successes.size()-1)).append("\n\n");
+    if (!failures.empty())
+        response.append(UPDATE_FAILURE).append(failures.substr(0, failures.size()-1)).append("\n\n");
+    response.append(get_subreddit_settings_list(message.subreddit.value()));
+    apiWrapper.submit_comment(response, message.fullname);
+}
+
 void iterate_messages() {
     cpr::Response messageQuery = apiWrapper.fetch_messages();
 
@@ -432,7 +496,7 @@ void iterate_messages() {
             RowResult settingsQuery = interface.get_subreddit_settings(message.subreddit.value());
             SubredditSetting settings(settingsQuery);
             if (settings.report_replies)
-                apiWrapper.report_submission(message.fullname); // TODO : Check if it works
+                apiWrapper.report_submission(message.fullname);
             else {
                 std::string modmailContent;
                 modmailContent.append(MODMAIL_FOOTER_1).append(message.subreddit.value()).append(MODMAIL_FOOTER_2).append(message.id);
@@ -448,62 +512,42 @@ void iterate_messages() {
 
         if (message.subject.starts_with("invitation to moderate")) {
             std::string subreddit = get_last_word(message.subject);
-            interface.add_settings_row(subreddit.substr(3, subreddit.size())); // Remove the "/r/"
-            import_submissions(subreddit);
+            std::string subredditWithoutR = subreddit.substr(3, subreddit.size()); // Remove the /r/
+            if (!subreddit_exists(subredditWithoutR)) // This methods acts against SQL injection
+                continue;
             apiWrapper.accept_invite(subreddit);
+            interface.add_settings_row(subredditWithoutR);
+            interface.create_table(subredditWithoutR);
+            import_submissions(subreddit);
+            std::string content;
+            content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR));
             continue;
         }
 
-        std::stringstream messageStream(message.body);
-        std::string parameter; std::string value;
-        std::string successes; std::string failures;
-        std::string response;
-        while (messageStream && messageStream.tellg() != -1) {
-            messageStream >> parameter;
-            if (BOOLEAN_SETTINGS.contains(parameter)) {
-                messageStream >> value;
-                if (value == "true" || value == "false") {
-                    interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value == "true" ? "1" : "0");
-                    successes.append("`").append(parameter).append("`,"); // Create & format list of successful boolean parameters
-                } else
-                {
-                    failures.append("`").append(parameter).append("`,");
-                }
-            }
-            else if (INT_SETTINGS.contains(parameter)) {
-                messageStream >> value;
-                if (is_number(value)) {
-                    interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value);
-                    successes.append("`").append(parameter).append("`,"); // Create & format list of successful int parameters
-                } else {
-                    failures.append("`").append(parameter).append("`,");
-                }
-            }
-        }
-        if (!successes.empty())
-            response.append(UPDATE_SUCCESS).append(successes.substr(0, successes.size()-1)).append("\n\n");
-        if (!failures.empty())
-            response.append(UPDATE_FAILURE).append(failures.substr(0, failures.size()-1)).append("\n\n");
-        response.append(get_subreddit_settings_list(message.subreddit.value()));
-        apiWrapper.submit_comment(response, message.fullname);
+        // If the message is a private DM, comes from a subreddit, & is not a mod invite, then it's probably a
+        // settings DM. => Try to find & parse settings
+        parse_subreddit_settings(message);
     }
 }
 
 // TODO: Revisit error handling
-// TODO: Create benchmark pipeline
-// TODO: Fragment iterate_messages method
 int main()
 {
-    if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
-        initializeToken();
+    int count = 0;
     initializeTesseract();
+    //while (true) {
+        try {
+            if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
+                initializeToken();
 
-    try {
-        iterate_messages();
-        iterate_submissions();
-    } catch (std::exception &e) {
-        std::cout << e.what() << std::endl;
-    }
+            iterate_messages();
+            iterate_submissions();
+        } catch (std::exception &e) {
+            std::cerr << "EXCEPTION : " << e.what() << std::endl;
+        }
+        std::cout << count++ << std::endl;
+        sleep(10);
+    //}
 
     return 0;
 }

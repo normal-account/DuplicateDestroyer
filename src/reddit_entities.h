@@ -37,8 +37,8 @@ public:
    std::string url;
    vector<std::string> galleryUrls;
 
-   bool is_video();
-   bool is_image();
+   [[nodiscard]] bool is_video() const;
+   [[nodiscard]] bool is_image() const;
 };
 
 class Message

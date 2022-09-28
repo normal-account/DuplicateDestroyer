@@ -1,13 +1,11 @@
-//
-// Created by carle on 3/13/22.
-//
 #include <iostream>
-#include <utility>
 #include "api_wrapper.h"
 
 #define HEADERS cpr::Header{{"Authorization", token}}, cpr::VerifySsl(false), cpr::UserAgent(USER_AGENT))
 #define HANDLE_STATUS if (query.status_code != 200) throw
 #define HANDLE_RATELIMIT if (stoi(query.header["X-Ratelimit-Remaining"]) == 0) { sleep(stoi(query.header["x-ratelimit-reset"])); std::cerr << "SLEPT" << std::endl; }
+
+
 
 
 void ApiWrapper::save_submission( const std::string &fullname )
@@ -67,9 +65,9 @@ void ApiWrapper::report_submission( const std::string &fullname )
 
 cpr::Response ApiWrapper::fetch_submissions()
 {
-    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/ForCSSTesting/new"},
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/memes_benchmarks_dd/new"},
                      cpr::Parameters{{"g",     "GLOBAL"},
-                                     {"limit", "1"}},
+                                     {"limit", "200"}},
     HEADERS;
     HANDLE_STATUS;
     return query;
@@ -89,7 +87,7 @@ cpr::Response ApiWrapper::fetch_top_submissions(const std::string &sub, const st
 
 cpr::Response ApiWrapper::fetch_messages()
 {
-    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/message/inbox"}, // TODO: change to unread
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/message/unread"}, // TODO: change to unread
                      cpr::Parameters{{"mark",  "true"},
                                      {"limit", "1"}},
     HEADERS;
@@ -108,9 +106,21 @@ cpr::Response ApiWrapper::submit_comment( const std::string &content, const std:
 
     HANDLE_STATUS;
     HANDLE_RATELIMIT;
+
     return query;
 }
 
+void ApiWrapper::distinguish_comment( const std::string &fullname )
+{
+    auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/distinguish"},
+                            cpr::Parameters{{"api_type",      "json"},
+                                            {"how",      "yes"},
+                                            {"id",      fullname},
+                                            {"sticky", "true"}},
+    HEADERS;
+    HANDLE_STATUS;
+    HANDLE_RATELIMIT;
+}
 
 void ApiWrapper::accept_invite( const std::string &subreddit )
 {
@@ -153,6 +163,20 @@ cpr::Response ApiWrapper::fetch_token()
     return query;
 }
 
+cpr::Response ApiWrapper::subreddit_exists( const std::string &sub )
+{
+    auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/search_subreddits"},
+                            cpr::Parameters{{"exact", "false"},
+                                            {"include_over_18", "true"},
+                                            {"include_unadvertisable", "true"},
+                                            {"query", sub}},
+    HEADERS;
+
+    HANDLE_STATUS;
+    HANDLE_RATELIMIT;
+    return query;
+}
+
 void ApiWrapper::set_token( const std::string &newToken )
 {
     token = newToken ;
@@ -167,3 +191,5 @@ unsigned long long ApiWrapper::get_time_expire()
 {
     return timeToExpire;
 }
+
+

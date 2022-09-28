@@ -25,7 +25,7 @@ Submission::Submission( json data )
         json urlList = data["media_metadata"];
         for ( auto urlIter = urlList.begin(); urlIter != urlList.end(); urlIter++) {
             std::string submissionID = urlIter.value()["id"];
-            std::string fileType = urlIter.value()["m"]; // e.g. for a PNG, "m" gives "image/jpg"
+            std::string fileType = urlIter.value()["m"]; // e.g. for a JPG, "m" gives "image/jpg"
             fileType = fileType.substr(6, fileType.size() - 6); // Extracting only the datatype (excluding 'image/')
             std::string constructedURL;
             constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( fileType );
@@ -45,7 +45,7 @@ Submission::Submission( json data )
     }
 }
 
-bool Submission::is_image()
+bool Submission::is_image() const
 {
 
     return (url.ends_with(".jpg") || url.ends_with(".jpg?1") || url.ends_with(".png") || url.ends_with("png?1")
@@ -54,7 +54,7 @@ bool Submission::is_image()
     );
 }
 
-bool Submission::is_video()
+bool Submission::is_video() const
 {
     return (url.ends_with(".gif") || url.ends_with(".mp4") || url.ends_with(".gifv") || url.find("v.redd.it") != std::string::npos
             || url.find("redgifs.com") != std::string::npos || url.find("youtu.be") != std::string::npos || url.find("youtube.com") != std::string::npos

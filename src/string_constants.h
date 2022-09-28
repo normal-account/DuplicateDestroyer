@@ -66,6 +66,13 @@ const char *const SETTINGS_STRING = "Current subreddit settings :\n\n    enabled
                                     "    enforce_titles: %s\n    title_remove_threshold: %s\n    title_report_threshold: %s\n    min_title_length_to_enforce: %s\n"
                                     "    removal_table_duplicate_number: %s\n    ocr_text_threshold: %s";
 
+const std::string THANKS_INVITE_1 = "Thank you for inviting me on /r/";
+// Subreddit name between these 2
+const std::string THANKS_INVITE_2 = ". I will save the top posts of your subreddit in my "
+                                    "database before scanning your /new section, which could take some "
+                                    "time. Feel free to message /r/DuplicateDestroyer if you have questions"
+                                    " or concerns.\n\n";
+
 const std::string UPDATE_SUCCESS = "Successfully updated the following parameters : ";
 
 const std::string UPDATE_FAILURE = "Failure to update the following parameters due to invalid values : ";
