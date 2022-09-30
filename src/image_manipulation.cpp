@@ -105,7 +105,6 @@ void Image::extract_text()
     tessBaseApi->SetImage( pix);
     outText = tessBaseApi->GetUTF8Text();
     ocrText = outText;
-    std::cout << "Text = " << ocrText << std::endl;
     delete outText;
 }
 
@@ -116,6 +115,7 @@ int getEditDistance(const std::string &first, const std::string& second)
     int n = second.length();
 
     int T[m + 1][n + 1];
+    T[0][0] = 0;
     for (int i = 1; i <= m; i++) {
         T[i][0] = i;
     }

@@ -39,7 +39,6 @@ void ApiWrapper::mark_message_as_read( const std::string &fullname )
 }
 
 
-
 void ApiWrapper::remove_submission( const std::string &fullname )
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/remove"},
@@ -54,7 +53,7 @@ void ApiWrapper::report_submission( const std::string &fullname )
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/report"},
                                      cpr::Parameters{{"thing_id", fullname},
-                                                     {"reason", "Found duplicate(s) - check pinned comment."},
+                                                     {"reason", "Found duplicate(s) - check pinned comment!"},
                                                      {"api_type", "json"},
                                                      {"custom_text", "true"}},
     HEADERS;
@@ -122,6 +121,7 @@ void ApiWrapper::distinguish_comment( const std::string &fullname )
     HANDLE_RATELIMIT;
 }
 
+
 void ApiWrapper::accept_invite( const std::string &subreddit )
 {
     auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com" + subreddit + "/api/accept_moderator_invite"},
@@ -148,11 +148,11 @@ void ApiWrapper::download_image( const std::string &url )
 cpr::Response ApiWrapper::fetch_token()
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                                            cpr::Authentication{"6_T2X8heZAm6sRvBLADkwQ",
-                                                                "ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
+                                            cpr::Authentication{"qSVbUBF1J2hpJQ"/*"6_T2X8heZAm6sRvBLADkwQ"*/,
+                                                                "qEEQpb3G_NKItrZ4CRboZRCk9SI"/*"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"*/},
                                             cpr::Parameters{{"grant_type", "password"},
-                                                            {"username",   "Im_a_Necrophiliac"},
-                                                            {"password",   "soleil"},
+                                                            {"username",   "ReviveMeIHaveRayGun"},
+                                                            {"password",   "soleil100"},
                                                             },
                                             cpr::VerifySsl( 0 ),
                                             cpr::UserAgent( USER_AGENT )
@@ -162,6 +162,7 @@ cpr::Response ApiWrapper::fetch_token()
 
     return query;
 }
+
 
 cpr::Response ApiWrapper::subreddit_exists( const std::string &sub )
 {

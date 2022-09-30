@@ -153,16 +153,17 @@ std::string submit_comment(const std::string &content, const std::string &fullna
 }
 
 bool determine_remove(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
-    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 80)
-    || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 80 && imageSimilarity > 50)
-    || (textSimilarity > 65 && imageSimilarity >= imageThreshold)
+    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 75)
+    || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 50)
+    || (textSimilarity > 60 && imageSimilarity >= imageThreshold)
     || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
+
+// TODO : Algorithm to check if text contains valid words and diresgard text altogether past a certain percentage
 // this is a test with about 35 chars !
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
-    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 80)
-           || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 80 && imageSimilarity > 70)
-           || (textSimilarity > 65 && imageSimilarity >= imageThreshold)
+    return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
+           || (textSimilarity > 60 && imageSimilarity >= imageThreshold)
            || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
@@ -202,18 +203,20 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
         if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
-        double strSimilarity = get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString);
 
-        std::cout << "String Similarity = " << strSimilarity << std::endl;
+        int strSimilarity = (int)get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString);
 
         std::string strhash = row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
-        std::cout << image.ocrText << std::endl;
         int similarity = image.compareHash10x10( mpzhash );
 
-        std::cout << "10x10 sim : " << similarity << std::endl;
+        //std::cout << "String Similarity = " << strSimilarity << std::endl;
+        //std::cout << "10x10 sim : " << similarity << std::endl;
+        std::string testSTR = row.get(DB_OCRSTRING).get<std::string>();
+        std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << testSTR.size() << " ) (" << (similarity) << ")";
 
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
+            std::cout << " (REMOVED)";
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
@@ -221,13 +224,15 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
 
-            std::cout << "8x8 sim : " << similarity << std::endl;
+            //std::cout << "8x8 sim : " << similarity << std::endl;
 
             if (determine_report(similarity, settings.report_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
+                std::cout << " (REPORTED)";
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
             }
         }
+        std::cout << std::endl;
     }
 
     if (numberDuplicates > 0) {
