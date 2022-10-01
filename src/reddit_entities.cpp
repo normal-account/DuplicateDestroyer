@@ -77,6 +77,11 @@ Message::Message( json data ) {
         subreddit.emplace();
         subreddit = data[ "data" ][ "subreddit" ];
     }
+
+    if (isReply) {
+        context.emplace();
+        context.value().append("https://reddit.com").append(data[ "data" ]["context"]);
+    }
 }
 
  SubredditSetting::SubredditSetting( RowResult &settingRows)

@@ -53,6 +53,7 @@ public:
    std::optional<std::string> subreddit;
    std::string type;
    std::string id;
+   std::optional<std::string> context;
 };
 
 class SubredditSetting

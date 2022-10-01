@@ -36,7 +36,7 @@ public:
 
    void save_submission( const std::string &id );
 
-   void report_submission( const std::string &id );
+   void report_submission( const std::string &id, const std::string &reason );
 
    void accept_invite( const std::string &subreddit );
 

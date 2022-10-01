@@ -49,11 +49,11 @@ void ApiWrapper::remove_submission( const std::string &fullname )
     HANDLE_RATELIMIT;
 }
 
-void ApiWrapper::report_submission( const std::string &fullname )
+void ApiWrapper::report_submission( const std::string &fullname, const std::string &reason )
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/report"},
                                      cpr::Parameters{{"thing_id", fullname},
-                                                     {"reason", "Found duplicate(s) - check pinned comment!"},
+                                                     {"reason", reason},
                                                      {"api_type", "json"},
                                                      {"custom_text", "true"}},
     HEADERS;
@@ -64,7 +64,7 @@ void ApiWrapper::report_submission( const std::string &fullname )
 
 cpr::Response ApiWrapper::fetch_submissions()
 {
-    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/memes_benchmarks_dd/new"},
+    auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/mod/new"},
                      cpr::Parameters{{"g",     "GLOBAL"},
                                      {"limit", "200"}},
     HEADERS;
@@ -102,7 +102,6 @@ cpr::Response ApiWrapper::submit_comment( const std::string &content, const std:
                                             {"thing_id",      id},
                                             {"return_rtjson", "false"}},
     HEADERS;
-
     HANDLE_STATUS("submit:");
     HANDLE_RATELIMIT;
 
@@ -148,11 +147,11 @@ void ApiWrapper::download_image( const std::string &url )
 cpr::Response ApiWrapper::fetch_token()
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                                            cpr::Authentication{"qSVbUBF1J2hpJQ"/*"6_T2X8heZAm6sRvBLADkwQ"*/,
-                                                                "qEEQpb3G_NKItrZ4CRboZRCk9SI"/*"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"*/},
+                                            cpr::Authentication{/*"qSVbUBF1J2hpJQ"*/"6_T2X8heZAm6sRvBLADkwQ",
+                                                                /*"qEEQpb3G_NKItrZ4CRboZRCk9SI"*/"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
                                             cpr::Parameters{{"grant_type", "password"},
-                                                            {"username",   "ReviveMeIHaveRayGun"},
-                                                            {"password",   "soleil100"},
+                                                            {"username",   "Im_a_Necrophiliac"},
+                                                            {"password",   "soleil"},
                                                             },
                                             cpr::VerifySsl( 0 ),
                                             cpr::UserAgent( USER_AGENT )

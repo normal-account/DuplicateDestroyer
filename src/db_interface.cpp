@@ -103,7 +103,9 @@ mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) 
 
     std::string where = "subreddit = '" + name + "'";
     auto row = table.select("*").where(where).execute();
-    assert(row.count());
+    //assert(row.count());
+    if (row.count() == 0)
+        throw std::runtime_error("Empty subreddit settings on " + name);
     return row;
 }
 
@@ -119,7 +121,7 @@ void db_interface::add_settings_row( const std::string &sub )
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
     // TODO : Revisit default values
-    table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 0, 0, 85, 95, 10, 5, 80).execute();
+    table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 1, 0, 85, 95, 10, 5, 80).execute();
 }
 
 

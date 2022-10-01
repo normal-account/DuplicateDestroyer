@@ -159,7 +159,7 @@ bool determine_remove(int imageSimilarity, int imageThreshold, double textSimila
     || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
-// TODO : Try algorithm to check if text contains valid words and diresgard text altogether past a certain percentage
+// TODO : Try algorithm to check if text contains valid words and diresgard text altogether past a certain percentage ?
 // this is a test with about 35 chars !
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
     return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
@@ -167,19 +167,28 @@ bool determine_report(int imageSimilarity, int imageThreshold, double textSimila
            || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
+std::string get_modmail_footer(const std::string &sub, const std::string &context) {
+    std::string modmailContent;
+    modmailContent.append(MODMAIL_FOOTER_1).append(sub).append(MODMAIL_FOOTER_2).append(context).append(MODMAIL_FOOTER_3);
+    return modmailContent;
+}
+
 void post_action_comment( std::string commentContent, const std::vector<std::string> &removeComment, const std::vector<std::string> &reportComment,
-                          const Submission &submission, const std::string &HEADER) {
+                          const Submission &submission, const std::string &HEADER, const bool reportReplies) {
     if (!removeComment.empty()) {
         commentContent = HEADER + commentContent;
         for (const auto &str : removeComment)
             commentContent.append(str);
-        commentContent.append( FOOTER_REMOVE );
+        if (reportReplies)
+            commentContent.append( FOOTER_REMOVE );
+        else
+            commentContent.append( get_modmail_footer(submission.subreddit, submission.shortlink) );
         apiWrapper.remove_submission(submission.fullname);
         submit_comment(commentContent, submission.fullname);
     } else if (!reportComment.empty()) {
         for (const auto &str : reportComment)
             commentContent.append(str);
-        apiWrapper.report_submission(submission.fullname);
+        apiWrapper.report_submission(submission.fullname, DUPLICATE_FOUND_MSG);
         std::string commentFullname = submit_comment(commentContent, submission.fullname);
         apiWrapper.remove_submission(commentFullname);
     }
@@ -210,13 +219,11 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
-        //std::cout << "String Similarity = " << strSimilarity << std::endl;
-        //std::cout << "10x10 sim : " << similarity << std::endl;
         std::string testSTR = row.get(DB_OCRSTRING).get<std::string>();
-        std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << testSTR.size() << " ) (" << (similarity) << ")";
+        //std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << testSTR.size() << " ) (" << (similarity) << ")";
 
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
-            std::cout << " (REMOVED)";
+            //std::cout << " (REMOVED)";
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
@@ -224,19 +231,17 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
 
-            //std::cout << "8x8 sim : " << similarity << std::endl;
-
             if (determine_report(similarity, settings.report_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
-                std::cout << " (REPORTED)";
+                //std::cout << " (REPORTED)";
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
             }
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
 
     if (numberDuplicates > 0) {
-        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_IMAGE);
+        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_IMAGE, settings.report_replies);
     }
 
     return numberDuplicates > 0;
@@ -293,13 +298,17 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
     if (numberDuplicates > 0) {
         if (!settings.report_links) {
             commentContent.append(FOOTER_REMOVE);
-            apiWrapper.report_submission(submission.fullname);
+            apiWrapper.report_submission(submission.fullname, DUPLICATE_FOUND_MSG);
             std::string commentFullname = submit_comment(commentContent, submission.fullname);
             apiWrapper.remove_submission(commentFullname);
         }
         else
         {
             commentContent = HEADER_REMOVE_LINK + commentContent;
+            if (settings.report_replies)
+                commentContent.append( FOOTER_REMOVE );
+            else
+                commentContent.append( get_modmail_footer(submission.subreddit, submission.shortlink) );
             apiWrapper . remove_submission( submission . fullname );
             submit_comment(commentContent, submission.fullname);
         }
@@ -338,7 +347,7 @@ void handle_title(Submission &submission, SubredditSetting &settings) {
         }
     }
     if (numberDuplicates > 0) {
-        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_TITLE);
+        post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_TITLE, settings.report_replies);
     }
 }
 
@@ -378,8 +387,6 @@ void import_submissions(const std::string &subreddit) {
 }
 
 void iterate_submissions() {
-    try
-    {
         cpr::Response submissionQuery = apiWrapper . fetch_submissions();
 
         json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
@@ -387,45 +394,48 @@ void iterate_submissions() {
         for ( auto submissionIter = submissionList . begin();
               submissionIter != submissionList . end(); submissionIter++ )
         {
-            Submission submission( submissionIter . value()[ "data" ] );
-            if ( submission . saved )
-                continue;
-            else
-                apiWrapper . save_submission( submission . fullname );
-
-            RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
-            SubredditSetting settings( settingsQuery );
-            if ( !settings . enabled )
-                continue;
-
-            interface . switch_subreddit( submission . subreddit );
-
-            bool submissionRemoved = false;
-
-            // 1 - Submission is a media
-            if (( submission . type == IMAGE && settings . enforce_images ) ||
-                ( submission . type == VIDEO && settings . enforce_videos ))
+            try
             {
-                if ( submission . isGallery )
+                Submission submission( submissionIter . value()[ "data" ] );
+                if ( submission . saved )
+                    continue;
+                else
+                    apiWrapper . save_submission( submission . fullname );
+
+
+                RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
+                SubredditSetting settings( settingsQuery );
+                if ( !settings . enabled )
+                    continue;
+
+                interface . switch_subreddit( submission . subreddit );
+
+                bool submissionRemoved = false;
+
+                // 1 - Submission is a media
+                if (( submission . type == IMAGE && settings . enforce_images ) ||
+                    ( submission . type == VIDEO && settings . enforce_videos ))
                 {
-                    for ( const auto &url : submission . galleryUrls )
-                        submissionRemoved = handle_image( submission, settings, url );
-                } else
-                    submissionRemoved = handle_image( submission, settings, submission . url );
-            } // 2 - submission is a link
-            else if ( settings . enforce_links )
-                submissionRemoved = handle_link( submission, settings );
+                    if ( submission . isGallery )
+                    {
+                        for ( const auto &url : submission . galleryUrls )
+                            submissionRemoved = handle_image( submission, settings, url );
+                    } else
+                        submissionRemoved = handle_image( submission, settings, submission . url );
+                } // 2 - submission is a link
+                else if ( settings . enforce_links )
+                    submissionRemoved = handle_link( submission, settings );
 
-            // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
-            if ( !submissionRemoved && settings . enforce_titles &&
-                 submission . title . size() >= settings . min_title_length_to_enforce )
-            {
-                handle_title( submission, settings );
+                // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
+                if ( !submissionRemoved && settings . enforce_titles &&
+                     submission . title . size() >= settings . min_title_length_to_enforce )
+                {
+                    handle_title( submission, settings );
+                }
+            } catch (std::exception &e) {
+                std::cerr << "EXCEPTION ON SUBMISSIONS:" << e.what() << std::endl;
             }
         }
-    } catch (std::exception &e) {
-        std::cerr << "EXCEPTION ON SUBMISSIONS: " << e.what() << std::endl;
-    }
 }
 
 std::string bool_row(Row &row, int pos) {
@@ -507,11 +517,11 @@ void iterate_messages() {
             RowResult settingsQuery = interface.get_subreddit_settings(message.subreddit.value());
             SubredditSetting settings(settingsQuery);
             if (settings.report_replies)
-                apiWrapper.report_submission(message.fullname);
+                apiWrapper.report_submission(message.fullname, FALSE_POSITIVE_MSG);
             else {
                 std::string modmailContent;
-                modmailContent.append(MODMAIL_FOOTER_1).append(message.subreddit.value()).append(MODMAIL_FOOTER_2).append(message.id);
-                apiWrapper.submit_comment(modmailContent, message.fullname);
+                modmailContent.append(MODMAIL_FOOTER_1).append(message.subreddit.value()).append(MODMAIL_FOOTER_2).append(message.context.value()).append(MODMAIL_FOOTER_3);
+                submit_comment(modmailContent, message.fullname);
             }
             continue;
         }
