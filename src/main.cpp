@@ -159,7 +159,7 @@ bool determine_remove(int imageSimilarity, int imageThreshold, double textSimila
     || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
-// TODO : Algorithm to check if text contains valid words and diresgard text altogether past a certain percentage
+// TODO : Try algorithm to check if text contains valid words and diresgard text altogether past a certain percentage
 // this is a test with about 35 chars !
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
     return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
@@ -343,8 +343,7 @@ void handle_title(Submission &submission, SubredditSetting &settings) {
 }
 
 void import_submissions(const std::string &subreddit) {
-    if (!interface.subreddit_table_exists(subreddit))
-        return;
+    interface.switch_subreddit(subreddit);
 
     for (const std::string &range : {"month", "year", "all"}) {
         cpr::Response submissionQuery = apiWrapper.fetch_top_submissions(subreddit, range);
@@ -357,8 +356,6 @@ void import_submissions(const std::string &subreddit) {
                 continue;
             else
                 apiWrapper.save_submission(submission.fullname);
-
-            interface.switch_subreddit(submission.subreddit);
 
             if (submission.type == IMAGE || submission.type == VIDEO) {
                 Image image; // TODO: Code repeated here... figure out a way to plug-in a function
@@ -381,44 +378,53 @@ void import_submissions(const std::string &subreddit) {
 }
 
 void iterate_submissions() {
-    cpr::Response submissionQuery = apiWrapper.fetch_submissions();
-
-    json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
-
-    for ( auto submissionIter = submissionList.begin(); submissionIter != submissionList.end(); submissionIter++)
+    try
     {
-        Submission submission(submissionIter.value()[ "data" ]);
-        if (submission.saved)
-            continue;
-        else
-            apiWrapper.save_submission(submission.fullname);
+        cpr::Response submissionQuery = apiWrapper . fetch_submissions();
 
-        RowResult settingsQuery = interface.get_subreddit_settings(submission.subreddit);
-        SubredditSetting settings(settingsQuery);
-        if (!settings.enabled)
-            continue;
+        json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
 
-        interface.switch_subreddit(submission.subreddit);
-
-        bool submissionRemoved = false;
-
-        // 1 - Submission is a media
-        if ( (submission.type == IMAGE && settings.enforce_images) || (submission.type == VIDEO && settings.enforce_videos) )
+        for ( auto submissionIter = submissionList . begin();
+              submissionIter != submissionList . end(); submissionIter++ )
         {
-            if ( submission . isGallery )
-            {
-                for ( const auto &url : submission . galleryUrls )
-                    submissionRemoved = handle_image( submission, settings, url );
-            } else
-                submissionRemoved = handle_image( submission, settings, submission . url );
-        } // 2 - submission is a link
-        else if (settings.enforce_links)
-            submissionRemoved = handle_link(submission, settings);
+            Submission submission( submissionIter . value()[ "data" ] );
+            if ( submission . saved )
+                continue;
+            else
+                apiWrapper . save_submission( submission . fullname );
 
-        // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
-        if (!submissionRemoved && settings.enforce_titles && submission.title.size() >= settings.min_title_length_to_enforce) {
-            handle_title(submission, settings);
+            RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
+            SubredditSetting settings( settingsQuery );
+            if ( !settings . enabled )
+                continue;
+
+            interface . switch_subreddit( submission . subreddit );
+
+            bool submissionRemoved = false;
+
+            // 1 - Submission is a media
+            if (( submission . type == IMAGE && settings . enforce_images ) ||
+                ( submission . type == VIDEO && settings . enforce_videos ))
+            {
+                if ( submission . isGallery )
+                {
+                    for ( const auto &url : submission . galleryUrls )
+                        submissionRemoved = handle_image( submission, settings, url );
+                } else
+                    submissionRemoved = handle_image( submission, settings, submission . url );
+            } // 2 - submission is a link
+            else if ( settings . enforce_links )
+                submissionRemoved = handle_link( submission, settings );
+
+            // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
+            if ( !submissionRemoved && settings . enforce_titles &&
+                 submission . title . size() >= settings . min_title_length_to_enforce )
+            {
+                handle_title( submission, settings );
+            }
         }
+    } catch (std::exception &e) {
+        std::cerr << "EXCEPTION ON SUBMISSIONS: " << e.what() << std::endl;
     }
 }
 
@@ -522,7 +528,8 @@ void iterate_messages() {
                 continue;
             apiWrapper.accept_invite(subreddit);
             interface.add_settings_row(subredditWithoutR);
-            interface.create_table(subredditWithoutR);
+            if (!interface.subreddit_table_exists(subredditWithoutR))
+                interface.create_table(subredditWithoutR);
             import_submissions(subreddit);
             std::string content;
             content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR));
@@ -535,12 +542,16 @@ void iterate_messages() {
     }
 }
 
+/*
+ * Removal 29/30
+ * Reports 9/9
+ * */
 // TODO: Revisit error handling
 int main()
 {
     int count = 0;
     initializeTesseract();
-    //while (true) {
+    while (true) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
                 initializeToken();
@@ -552,7 +563,7 @@ int main()
         }
         std::cout << count++ << std::endl;
         sleep(10);
-    //}
+    }
 
     return 0;
 }
