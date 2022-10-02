@@ -52,7 +52,13 @@ public:
 
     void add_settings_row(const std::string& sub);
 
-    void create_table(const std::string &sub);
+    void create_table_duplicates( const std::string &sub);
+
+    void create_table_saved( const std::string &sub);
+
+    void save_submission( const std::string &sub, const std::string &id );
+
+    bool is_submission_saved( const std::string &sub, const std::string &id );
 };
 
 

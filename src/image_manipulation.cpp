@@ -163,9 +163,10 @@ std::string Image::filter_non_words( const std::set<std::string> &dict ) const
     std::string word;
     do {
         ocrStream >> word;
-        if (dict.contains(word))
-            filteredOcr.append(prepare_word(word)).append(" ");
-    } while(ocrStream);
+        std::string preparedWord = prepare_word(word);
+        if (dict.contains(preparedWord))
+            filteredOcr.append(preparedWord).append(" ");
+    } while(!ocrStream.eof() && ocrStream.tellg() != -1);
     std::cout << "Before {" << ocrText << "}" << std::endl;
     std::cout << "After  {" << filteredOcr << "}" << std::endl;
     return filteredOcr;

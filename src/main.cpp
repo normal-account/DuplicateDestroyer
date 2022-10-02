@@ -4,7 +4,7 @@
 #include "string_constants.h"
 #include <chrono>
 #include <cstdio>
-
+#include "utils.h"
 
 tesseract::TessBaseAPI* tessBaseApi;
 ApiWrapper apiWrapper;
@@ -53,19 +53,22 @@ void initialize_tesseract()
 }
 
 
+// NOTE : Filtering non-words seemed interesting at first, but it greatly reduced the amount of detected reposts (more than 50%).
+// May also reduce false positives but I doubt it since you're essentially losing data. This function will remain unused for the moment.
 void initialize_dictionnary() {
     std::string word;
 
-    // TODO : Add dicts in repo
     std::ifstream usDict("/usr/share/dict/american-english");
     while (getline (usDict, word)) {
-        dictionnary.insert(word);
+        if (word.size() > 1)
+            dictionnary.insert(word);
     }
     usDict.close();
 
     std::ifstream ukDict("/usr/share/dict/british-english");
     while (getline (ukDict, word)) {
-        dictionnary.insert(word);
+        if (word.size() > 1)
+            dictionnary.insert(word);
     }
     ukDict.close();
 }
@@ -134,7 +137,7 @@ std::string create_image_markdown_row( int number, int similarity, Row &row, lon
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
            + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
-           + dimensions + " | [" + title + "](https://redd.it/" + id + ")\n";
+           + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
 }
 
 
@@ -224,7 +227,7 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
     auto query = interface.get_image_rows();
 
     commentContent.append(create_image_markdown_header( submission . author, unix_time_to_string( submission . created ), dimensions_to_string( image . get_dimensions())));
-    std::string imageOcrString = image.filter_non_words(dictionnary);
+    std::string imageOcrString = image.get_text();//image.filter_non_words(dictionnary);
 
     for (auto row : *query) {
         if (numberDuplicates > settings.removal_table_duplicate_number)
@@ -233,18 +236,18 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
         if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
+        std::string ocrSTR = row.get(DB_OCRSTRING).get<std::string>();
 
-        int strSimilarity = (int)get_string_similarity(row.get(DB_OCRSTRING).get<std::string>(), imageOcrString);
+        int strSimilarity = (int)get_string_similarity(ocrSTR, imageOcrString);
 
         std::string strhash = row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
-        std::string testSTR = row.get(DB_OCRSTRING).get<std::string>();
-        //std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << testSTR.size() << " ) (" << (similarity) << ")";
+        std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << ocrSTR.size() << " ) (" << (similarity) << ")";
 
-        if (determine_remove(similarity, settings.remove_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
-            //std::cout << " (REMOVED)";
+        if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
+            std::cout << " (REMOVED)";
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
@@ -252,13 +255,13 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
 
-            if (determine_report(similarity, settings.report_threshold, strSimilarity, image.ocrText.size(), strhash.size())) {
-                //std::cout << " (REPORTED)";
+            if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
+                std::cout << " (REPORTED)";
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
             }
         }
-        //std::cout << std::endl;
+        std::cout << std::endl;
     }
 
     if (numberDuplicates > 0) {
@@ -380,10 +383,10 @@ void import_submissions(const std::string &subreddit) {
         for (auto &submissionIter : submissionList) {
             try {
                 Submission submission(submissionIter[ "data" ]);
-                if (submission.saved)
+                if (interface.is_submission_saved(submission.subreddit, submission.id))
                     continue;
                 else
-                    apiWrapper.save_submission(submission.fullname);
+                    interface.save_submission(submission.subreddit, submission.id);
 
                 if (submission.type == IMAGE || submission.type == VIDEO) {
                     Image image; // TODO: Code repeated here... figure out a way to plug-in a function
@@ -432,10 +435,10 @@ void iterate_submissions() {
         try
         {
             Submission submission( submissionIter . value()[ "data" ] );
-            if ( submission . saved )
+            if ( interface.is_submission_saved(submission.subreddit, submission.id) )
                 continue;
             else
-                apiWrapper . save_submission( submission . fullname );
+                interface . save_submission( submission . subreddit, submission.id );
 
             RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
             SubredditSetting settings( settingsQuery );
@@ -579,7 +582,9 @@ void iterate_messages() {
             if (!interface.settings_exist(subredditWithoutR))
                 interface.add_settings_row(subredditWithoutR);
             if (!interface.subreddit_table_exists(subredditWithoutR))
-                interface.create_table(subredditWithoutR);
+                interface . create_table_duplicates( subredditWithoutR );
+            if (!interface.subreddit_table_exists(subredditWithoutR + "_saved"))
+                interface . create_table_saved( subredditWithoutR );
             apiWrapper.accept_invite(subreddit);
             import_submissions(subredditWithoutR);
             std::string content;
@@ -594,10 +599,9 @@ void iterate_messages() {
 }
 
 /*
- * Removal 29/30
- * Reports 9/9
+ * Removal 45/45
+ * Reports 9/10
  * */
-// TODO : Replace save() with calls to a new DB
 // TODO : Do all non-mod actions on a separate account to lessen the API usage
 // TODO : Implement multithreading with sleeps on threads when needed + mutex on DB for each sub locked between a select and an insert
 
@@ -605,7 +609,7 @@ int main()
 {
     int count = 0;
     initialize_tesseract();
-    initialize_dictionnary();
+
     while (true) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)

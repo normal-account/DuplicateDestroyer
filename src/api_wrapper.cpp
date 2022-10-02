@@ -7,15 +7,14 @@
 
 
 
-
-void ApiWrapper::save_submission( const std::string &fullname )
+/*void ApiWrapper::save_submission( const std::string &fullname )
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/save"},
                                      cpr::Parameters{{"id", fullname},},
     HEADERS;
     HANDLE_STATUS("save");
     HANDLE_RATELIMIT;
-}
+}*/
 
 void ApiWrapper::send_message( const std::string &user, const std::string &content, const std::string &subject )
 {

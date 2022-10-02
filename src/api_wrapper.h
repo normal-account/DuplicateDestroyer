@@ -34,7 +34,7 @@ public:
 
    cpr::Response submit_comment( const std::string &content, const std::string &id );
 
-   void save_submission( const std::string &id );
+   //void save_submission( const std::string &id );
 
    void report_submission( const std::string &id, const std::string &reason );
 

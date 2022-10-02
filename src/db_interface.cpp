@@ -87,9 +87,9 @@ bool db_interface::subreddit_table_exists( const std::string &sub )
     return table.existsInDatabase();
 }
 
-
-// WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call
-void db_interface::create_table( const std::string &sub )
+// Table containing analyzed submissions.
+// WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call.
+void db_interface::create_table_duplicates( const std::string &sub )
 {
     session.sql("use all_reposts").execute(); // Required
     session.sql("create table " + sub + " ("
@@ -104,6 +104,28 @@ void db_interface::create_table( const std::string &sub )
                 "title varchar(301),"
                 "url varchar(300)"
                 ");").execute();
+}
+
+// Table containing saved submissions
+// WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call.
+void db_interface::create_table_saved( const std::string &sub )
+{
+    session.sql("use all_reposts").execute(); // Required
+    session.sql("create table " + sub + "_saved (id varchar(10));").execute();
+}
+
+void db_interface::save_submission( const std::string &sub, const std::string &id )
+{
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(sub + "_saved");
+    table.insert().values(id).execute();
+}
+
+bool db_interface::is_submission_saved( const std::string &sub, const std::string &id )
+{
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable(sub + "_saved");
+    return table.select("*").where("id = '" + id + "'").execute().count() > 0;
 }
 
 mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
