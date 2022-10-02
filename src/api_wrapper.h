@@ -3,7 +3,7 @@
 //
 #include <cpr/cpr.h>
 
-#define USER_AGENT "DuplicateDestroyer 1.2v C++"
+#define USER_AGENT "Linux:DuplicateDestroyer:v2.0 C++ (by /u/PowerModerator)"
 #define IMAGE_NAME "image_in_process"
 
 class ApiWrapper
@@ -20,17 +20,17 @@ public:
 
    cpr::Response fetch_top_submissions(const std::string &sub, const std::string &range);
 
-   cpr::Response fetch_token();
+   static cpr::Response fetch_token();
 
    void set_token( const std::string &newToken );
 
    void set_time_expire ( unsigned long long unixTime );
 
-   unsigned long long get_time_expire();
+   unsigned long long get_time_expire() const;
 
    cpr::Response fetch_messages();
 
-   void download_image( const std::string &url );
+   static void download_image( const std::string &url );
 
    cpr::Response submit_comment( const std::string &content, const std::string &id );
 

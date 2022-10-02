@@ -186,7 +186,7 @@ void ApiWrapper::set_time_expire( unsigned long long unixTime )
     timeToExpire = unixTime;
 }
 
-unsigned long long ApiWrapper::get_time_expire()
+unsigned long long ApiWrapper::get_time_expire() const
 {
     return timeToExpire;
 }

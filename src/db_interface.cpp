@@ -31,7 +31,7 @@ std::shared_ptr<RowResult> db_interface::get_image_rows() {
 std::shared_ptr<RowResult> db_interface::get_link_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*").where("is_video = 1");
+    auto query = table.select("*").where("is_link = 1");
     return std::make_shared<RowResult>(query.execute());
 }
 
@@ -100,7 +100,7 @@ void db_interface::create_table_duplicates( const std::string &sub )
                 "author varchar(50),"
                 "dimensions varchar(30),"
                 "date int(11),"
-                "is_video boolean,"
+                "is_link boolean,"
                 "title varchar(301),"
                 "url varchar(300)"
                 ");").execute();

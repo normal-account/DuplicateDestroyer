@@ -137,7 +137,7 @@ std::string create_image_markdown_row( int number, int similarity, Row &row, lon
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
            + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
-           + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
+           + dimensions + " | [" + title + "](https://redd.it/" + id + ")\n";
 }
 
 
@@ -183,7 +183,6 @@ bool determine_remove(int imageSimilarity, int imageThreshold, double textSimila
     || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
-// TODO : Implement algorithm to check if text contains valid words and diresgard text altogether past a certain percentage ?
 // this is a test with about 35 chars !
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
     return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
@@ -244,10 +243,10 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
-        std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << ocrSTR.size() << " ) (" << (similarity) << ")";
+        //std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << ocrSTR.size() << " ) (" << (similarity) << ")";
 
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
-            std::cout << " (REMOVED)";
+            //std::cout << " (REMOVED)";
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
@@ -256,12 +255,12 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
             similarity = image.compareHash8x8( mpzhash );
 
             if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
-                std::cout << " (REPORTED)";
+                //std::cout << " (REPORTED)";
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
             }
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
 
     if (numberDuplicates > 0) {
@@ -602,7 +601,7 @@ void iterate_messages() {
  * Removal 45/45
  * Reports 9/10
  * */
-// TODO : Do all non-mod actions on a separate account to lessen the API usage
+// TODO :
 // TODO : Implement multithreading with sleeps on threads when needed + mutex on DB for each sub locked between a select and an insert
 
 int main()
