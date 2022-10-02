@@ -12,7 +12,8 @@ using json = nlohmann::json;
 enum TYPE {
    IMAGE,
    VIDEO,
-   LINK
+   LINK,
+   SELFTEXT
 };
 
 class Submission

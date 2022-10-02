@@ -5,9 +5,11 @@
 #include <chrono>
 #include <cstdio>
 
+
 tesseract::TessBaseAPI* tessBaseApi;
 ApiWrapper apiWrapper;
 db_interface interface( (Session("localhost", 33060, "db_user", "soleil")));
+std::set<std::string> dictionnary;
 
 using namespace ::mysqlx;
 
@@ -18,7 +20,7 @@ unsigned long long get_unix_time() {
 }
 
 // Should be done only once the original token expires.
-void initializeToken()
+void initialize_token()
 {
     cpr::Response tokenQuery = apiWrapper.fetch_token();
     json jsonToken = json::parse( tokenQuery . text );
@@ -29,12 +31,12 @@ void initializeToken()
     apiWrapper.set_time_expire(get_unix_time() + expiresIn);
 }
 
-void destroyTesseract() {
+void destroy_tesseract() {
     tessBaseApi->End();
     delete tessBaseApi;
 }
 
-void initializeTesseract()
+void initialize_tesseract()
 {
     tessBaseApi = new tesseract::TessBaseAPI();
     // Initialize tesseract-ocr with English, without specifying tessdata path
@@ -47,8 +49,27 @@ void initializeTesseract()
     // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
     tessBaseApi->SetVariable("debug_file", "/dev/null");
     tessBaseApi->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
-    atexit((destroyTesseract));
+    atexit(( destroy_tesseract ));
 }
+
+
+void initialize_dictionnary() {
+    std::string word;
+
+    // TODO : Add dicts in repo
+    std::ifstream usDict("/usr/share/dict/american-english");
+    while (getline (usDict, word)) {
+        dictionnary.insert(word);
+    }
+    usDict.close();
+
+    std::ifstream ukDict("/usr/share/dict/british-english");
+    while (getline (ukDict, word)) {
+        dictionnary.insert(word);
+    }
+    ukDict.close();
+}
+
 
 bool is_number(const std::string& s)
 {
@@ -98,8 +119,8 @@ std::string create_image_markdown_header( const std::string &author, const std::
     return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Dimensions:** " + dimensions + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE_IMAGE;
 }
 
-std::string create_markdown_header( const std::string &author, const std::string &date ) {
-    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_TABLE_IMAGE;
+std::string create_markdown_header( const std::string &author, const std::string &date, const std::string &MARKDOWN_HEADER) {
+    return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_HEADER;
 }
 
 std::string create_image_markdown_row( int number, int similarity, Row &row, long long submissionTime) {
@@ -113,7 +134,7 @@ std::string create_image_markdown_row( int number, int similarity, Row &row, lon
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
            + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
-           + dimensions + " | [" + title + "](https://redd.it/" + id + ")";
+           + dimensions + " | [" + title + "](https://redd.it/" + id + ")\n";
 }
 
 
@@ -124,7 +145,7 @@ std::string create_link_markdown_row( int number, Row &row, long long submission
     auto title = row.get(DB_TITLE).get<std::string>();
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
-           + " | " + get_time_interval(unixDate, submissionTime) + " | [url](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
+           + " | " + get_time_interval(unixDate, submissionTime) + " | [url](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")\n";
 }
 
 std::string create_title_markdown_row( int number, Row &row, long long submissionTime, int similarity) {
@@ -134,8 +155,8 @@ std::string create_title_markdown_row( int number, Row &row, long long submissio
     auto title = row.get(DB_TITLE).get<std::string>();
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
-           + " | " + get_time_interval(unixDate, submissionTime) + "[" +
-           std::to_string(similarity) + "%](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")";
+           + " | " + get_time_interval(unixDate, submissionTime) + "| [" +
+           std::to_string(similarity) + "%](https://" + url + ") | [" + title + "](https://redd.it/" + id + ")\n";
 }
 
 std::string get_comment_fullname(const cpr::Response &query) {
@@ -159,7 +180,7 @@ bool determine_remove(int imageSimilarity, int imageThreshold, double textSimila
     || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
-// TODO : Try algorithm to check if text contains valid words and diresgard text altogether past a certain percentage ?
+// TODO : Implement algorithm to check if text contains valid words and diresgard text altogether past a certain percentage ?
 // this is a test with about 35 chars !
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
     return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
@@ -203,7 +224,7 @@ bool search_image_duplicates( Submission &submission, SubredditSetting &settings
     auto query = interface.get_image_rows();
 
     commentContent.append(create_image_markdown_header( submission . author, unix_time_to_string( submission . created ), dimensions_to_string( image . get_dimensions())));
-    std::string imageOcrString = image . get_text();
+    std::string imageOcrString = image.filter_non_words(dictionnary);
 
     for (auto row : *query) {
         if (numberDuplicates > settings.removal_table_duplicate_number)
@@ -263,13 +284,10 @@ void process_image(Image &image, const std::string &url) {
 }
 
 
-bool handle_image(Submission &submission, SubredditSetting &settings, const std::string &url) {
-    Image image;
+bool handle_image(Submission &submission, SubredditSetting &settings, Image &image, const std::string &url) {
     std::string commentContent;
     process_image(image, url);
     bool submissionRemoved = search_image_duplicates( submission, settings, image );
-    if (!submissionRemoved)
-        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
 
     return submissionRemoved;
 }
@@ -278,7 +296,7 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
     std::string commentContent;
     auto query = interface.get_link_rows();
 
-    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created )));
+    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created ), MARKDOWN_TABLE_LINK));
 
     int numberDuplicates = 0;
 
@@ -296,7 +314,7 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
     }
 
     if (numberDuplicates > 0) {
-        if (!settings.report_links) {
+        if (settings.report_links) {
             commentContent.append(FOOTER_REMOVE);
             apiWrapper.report_submission(submission.fullname, DUPLICATE_FOUND_MSG);
             std::string commentFullname = submit_comment(commentContent, submission.fullname);
@@ -313,17 +331,16 @@ bool handle_link(Submission &submission, SubredditSetting &settings) {
             submit_comment(commentContent, submission.fullname);
         }
     }
-    else
-        interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
     return numberDuplicates > 0;
 }
 
-void handle_title(Submission &submission, SubredditSetting &settings) {
+bool handle_title(Submission &submission, SubredditSetting &settings) {
     std::string commentContent;
     std::vector<std::string> reportComment; std::vector<std::string> removeComment;
-    auto query = interface.get_link_rows();
 
-    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created )));
+    auto query = interface.get_title_rows(settings.min_title_length_to_enforce);
+
+    commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created ), MARKDOWN_TABLE_TITLE));
 
     int numberDuplicates = 0;
 
@@ -349,6 +366,7 @@ void handle_title(Submission &submission, SubredditSetting &settings) {
     if (numberDuplicates > 0) {
         post_action_comment(commentContent, removeComment, reportComment, submission, HEADER_REMOVE_TITLE, settings.report_replies);
     }
+    return numberDuplicates > 0;
 }
 
 void import_submissions(const std::string &subreddit) {
@@ -360,82 +378,103 @@ void import_submissions(const std::string &subreddit) {
         json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
 
         for (auto &submissionIter : submissionList) {
-            Submission submission(submissionIter[ "data" ]);
-            if (submission.saved)
-                continue;
-            else
-                apiWrapper.save_submission(submission.fullname);
+            try {
+                Submission submission(submissionIter[ "data" ]);
+                if (submission.saved)
+                    continue;
+                else
+                    apiWrapper.save_submission(submission.fullname);
 
-            if (submission.type == IMAGE || submission.type == VIDEO) {
-                Image image; // TODO: Code repeated here... figure out a way to plug-in a function
-                if (submission.isGallery) {
-                    for (const std::string &url : submission.galleryUrls)
-                    {
-                        process_image(image, url);
-                        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+                if (submission.type == IMAGE || submission.type == VIDEO) {
+                    Image image; // TODO: Code repeated here... figure out a way to plug-in a function
+                    if (submission.isGallery) {
+                        for (const std::string &url : submission.galleryUrls)
+                        {
+                            process_image(image, url);
+                            interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+                        }
+                    } else {
+                        process_image(image, submission.url);
+                        interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
                     }
-                } else {
-                    process_image(image, submission.url);
-                    interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
                 }
-            }
-            else {
-                interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+                else {
+                    interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+                }
+            } catch (std::exception &e) {
+                std::cerr << "IMPORT SUBMISSIONS:" << e.what() << std::endl;
             }
         }
     }
 }
 
-void iterate_submissions() {
-        cpr::Response submissionQuery = apiWrapper . fetch_submissions();
-
-        json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
-
-        for ( auto submissionIter = submissionList . begin();
-              submissionIter != submissionList . end(); submissionIter++ )
+void insert_submission(const Submission &submission, Image &image, bool isMedia) {
+    if (isMedia) {
+        if ( submission . isGallery )
         {
-            try
+            for ( const auto &url : submission . galleryUrls )
+                interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+        } else
+            interface.insert_submission(image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
+    }
+    else // link or selftext
+        interface.insert_submission("", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+}
+
+void iterate_submissions() {
+    cpr::Response submissionQuery = apiWrapper . fetch_submissions();
+
+    json submissionList = json::parse( submissionQuery . text )[ "data" ][ "children" ];
+
+    // Inversed loop - we want to check older submissions first
+    for ( auto submissionIter = submissionList.rbegin(); submissionIter != submissionList . rend(); submissionIter++ )
+    {
+        try
+        {
+            Submission submission( submissionIter . value()[ "data" ] );
+            if ( submission . saved )
+                continue;
+            else
+                apiWrapper . save_submission( submission . fullname );
+
+            RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
+            SubredditSetting settings( settingsQuery );
+            if ( !settings . enabled )
+                continue;
+
+            interface . switch_subreddit( submission . subreddit );
+
+            bool submissionRemoved = false;
+
+            bool isMedia = ( submission . type == IMAGE && settings . enforce_images ) ||
+                           ( submission . type == VIDEO && settings . enforce_videos );
+            Image image;
+            // 1 - Submission is a media
+            if (isMedia)
             {
-                Submission submission( submissionIter . value()[ "data" ] );
-                if ( submission . saved )
-                    continue;
-                else
-                    apiWrapper . save_submission( submission . fullname );
-
-
-                RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
-                SubredditSetting settings( settingsQuery );
-                if ( !settings . enabled )
-                    continue;
-
-                interface . switch_subreddit( submission . subreddit );
-
-                bool submissionRemoved = false;
-
-                // 1 - Submission is a media
-                if (( submission . type == IMAGE && settings . enforce_images ) ||
-                    ( submission . type == VIDEO && settings . enforce_videos ))
+                if ( submission . isGallery )
                 {
-                    if ( submission . isGallery )
-                    {
-                        for ( const auto &url : submission . galleryUrls )
-                            submissionRemoved = handle_image( submission, settings, url );
-                    } else
-                        submissionRemoved = handle_image( submission, settings, submission . url );
-                } // 2 - submission is a link
-                else if ( settings . enforce_links )
-                    submissionRemoved = handle_link( submission, settings );
+                    for ( const auto &url : submission . galleryUrls )
+                        submissionRemoved = handle_image( submission, settings, image, url );
+                } else
+                    submissionRemoved = handle_image( submission, settings, image, submission . url );
+            } // 2 - submission is a link
+            else if ( settings . enforce_links && submission.type == LINK )
+                submissionRemoved = handle_link( submission, settings );
 
-                // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
-                if ( !submissionRemoved && settings . enforce_titles &&
-                     submission . title . size() >= settings . min_title_length_to_enforce )
-                {
-                    handle_title( submission, settings );
-                }
-            } catch (std::exception &e) {
-                std::cerr << "EXCEPTION ON SUBMISSIONS:" << e.what() << std::endl;
+            // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
+            if ( !submissionRemoved && settings . enforce_titles && submission . title . size() >= settings . min_title_length_to_enforce )
+            {
+                submissionRemoved = handle_title( submission, settings );
             }
+
+            if (!submissionRemoved)
+                insert_submission(submission, image, isMedia);
+
+        } catch (std::exception &e) {
+            std::cerr << "EXCEPTION ON SUBMISSIONS:" << e.what() << std::endl;
         }
+    }
 }
 
 std::string bool_row(Row &row, int pos) {
@@ -461,6 +500,7 @@ std::string get_subreddit_settings_list(const std::string &sub) {
     return formattedSettings;
 }
 
+// Notice : reddit's API was returning false for a small test subreddit, even though it existed... seems to work for every other sub but watch out for bug
 bool subreddit_exists(const std::string &sub) {
     if (sub.size() > 50 || sub.size() < 2)
         return false;
@@ -536,11 +576,12 @@ void iterate_messages() {
             std::string subredditWithoutR = subreddit.substr(3, subreddit.size()); // Remove the /r/
             if (!subreddit_exists(subredditWithoutR)) // This methods acts against SQL injection
                 continue;
-            apiWrapper.accept_invite(subreddit);
-            interface.add_settings_row(subredditWithoutR);
+            if (!interface.settings_exist(subredditWithoutR))
+                interface.add_settings_row(subredditWithoutR);
             if (!interface.subreddit_table_exists(subredditWithoutR))
                 interface.create_table(subredditWithoutR);
-            import_submissions(subreddit);
+            apiWrapper.accept_invite(subreddit);
+            import_submissions(subredditWithoutR);
             std::string content;
             content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR));
             continue;
@@ -556,15 +597,19 @@ void iterate_messages() {
  * Removal 29/30
  * Reports 9/9
  * */
-// TODO: Revisit error handling
+// TODO : Replace save() with calls to a new DB
+// TODO : Do all non-mod actions on a separate account to lessen the API usage
+// TODO : Implement multithreading with sleeps on threads when needed + mutex on DB for each sub locked between a select and an insert
+
 int main()
 {
     int count = 0;
-    initializeTesseract();
+    initialize_tesseract();
+    initialize_dictionnary();
     while (true) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
-                initializeToken();
+                initialize_token();
 
             iterate_messages();
             iterate_submissions();

@@ -41,7 +41,7 @@ Submission::Submission( json data )
             type = VIDEO;
             url = data[ "thumbnail" ];
         } else
-            type = LINK;
+            type = ( data["thumbnail"] == "self" ) ? SELFTEXT : LINK;
     }
 }
 

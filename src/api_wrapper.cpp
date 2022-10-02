@@ -13,7 +13,7 @@ void ApiWrapper::save_submission( const std::string &fullname )
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/save"},
                                      cpr::Parameters{{"id", fullname},},
     HEADERS;
-    HANDLE_STATUS("save:");
+    HANDLE_STATUS("save");
     HANDLE_RATELIMIT;
 }
 
@@ -24,7 +24,7 @@ void ApiWrapper::send_message( const std::string &user, const std::string &conte
                                                           {"text",    content},
                                                           {"to",      user}},
     HEADERS;
-    HANDLE_STATUS("send:");
+    HANDLE_STATUS("send");
     HANDLE_RATELIMIT;
 }
 
@@ -34,7 +34,7 @@ void ApiWrapper::mark_message_as_read( const std::string &fullname )
     cpr::Response query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/read_message"},
                                           cpr::Parameters{{"id", fullname}},
     HEADERS;
-    HANDLE_STATUS("read_msg:");
+    HANDLE_STATUS("read_msg");
     HANDLE_RATELIMIT;
 }
 
@@ -45,7 +45,7 @@ void ApiWrapper::remove_submission( const std::string &fullname )
                                      cpr::Parameters{{"id",   fullname},
                                                      {"spam", "false"}},
     HEADERS;
-    HANDLE_STATUS("remove:");
+    HANDLE_STATUS("remove");
     HANDLE_RATELIMIT;
 }
 
@@ -57,7 +57,7 @@ void ApiWrapper::report_submission( const std::string &fullname, const std::stri
                                                      {"api_type", "json"},
                                                      {"custom_text", "true"}},
     HEADERS;
-    HANDLE_STATUS("report:");
+    HANDLE_STATUS("report");
     HANDLE_RATELIMIT;
 }
 
@@ -68,7 +68,7 @@ cpr::Response ApiWrapper::fetch_submissions()
                      cpr::Parameters{{"g",     "GLOBAL"},
                                      {"limit", "200"}},
     HEADERS;
-    HANDLE_STATUS("fetch_submissions:");
+    HANDLE_STATUS("fetch_submissions");
     return query;
 }
 
@@ -79,7 +79,7 @@ cpr::Response ApiWrapper::fetch_top_submissions(const std::string &sub, const st
                                            {"limit", "100"},
                                            {"t", range}},
     HEADERS;
-    HANDLE_STATUS("fetch_top:");
+    HANDLE_STATUS("fetch_top");
     return query;
 }
 
@@ -90,7 +90,7 @@ cpr::Response ApiWrapper::fetch_messages()
                      cpr::Parameters{{"mark",  "true"},
                                      {"limit", "1"}},
     HEADERS;
-    HANDLE_STATUS("fetch_msg:");
+    HANDLE_STATUS("fetch_msg");
     return query;
 }
 
@@ -102,7 +102,7 @@ cpr::Response ApiWrapper::submit_comment( const std::string &content, const std:
                                             {"thing_id",      id},
                                             {"return_rtjson", "false"}},
     HEADERS;
-    HANDLE_STATUS("submit:");
+    HANDLE_STATUS("submit");
     HANDLE_RATELIMIT;
 
     return query;
@@ -116,7 +116,7 @@ void ApiWrapper::distinguish_comment( const std::string &fullname )
                                             {"id",      fullname},
                                             {"sticky", "true"}},
     HEADERS;
-    HANDLE_STATUS("distinguish:");
+    HANDLE_STATUS("distinguish");
     HANDLE_RATELIMIT;
 }
 
@@ -126,7 +126,7 @@ void ApiWrapper::accept_invite( const std::string &subreddit )
     auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com" + subreddit + "/api/accept_moderator_invite"},
                             cpr::Parameters{{"api_type", "json"}},
     HEADERS;
-    HANDLE_STATUS("accept_invite:");
+    HANDLE_STATUS("accept_invite");
     HANDLE_RATELIMIT;
 }
 
@@ -138,25 +138,25 @@ void ApiWrapper::download_image( const std::string &url )
                                          cpr::VerifySsl( false ),
                                          cpr::UserAgent( USER_AGENT ));
 
-    HANDLE_STATUS("download:");
+    HANDLE_STATUS("download");
     std::ofstream tempFile( IMAGE_NAME );
     tempFile << query . text;
 }
 
-
+// Rev, nec, dd_bot
 cpr::Response ApiWrapper::fetch_token()
 {
     cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                                            cpr::Authentication{/*"qSVbUBF1J2hpJQ"*/"6_T2X8heZAm6sRvBLADkwQ",
-                                                                /*"qEEQpb3G_NKItrZ4CRboZRCk9SI"*/"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"},
+                                            cpr::Authentication{/*"6_T2X8heZAm6sRvBLADkwQ"*/"7FqDgsrKsu5IYL5N53ZVZg"
+                                                                /*"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"*/, "pP2bDfRkr_vGaAhBfYE-CyzuLt2Tlw"},
                                             cpr::Parameters{{"grant_type", "password"},
-                                                            {"username",   "Im_a_Necrophiliac"},
-                                                            {"password",   "soleil"},
+                                                            {"username",   "dd_testing_account"},
+                                                            {"password",   "soleil100"},
                                                             },
                                             cpr::VerifySsl( 0 ),
                                             cpr::UserAgent( USER_AGENT )
     );
-    HANDLE_STATUS("fetch_token:");
+    HANDLE_STATUS("fetch_token");
     HANDLE_RATELIMIT;
 
     return query;
@@ -172,7 +172,7 @@ cpr::Response ApiWrapper::subreddit_exists( const std::string &sub )
                                             {"query", sub}},
     HEADERS;
 
-    HANDLE_STATUS("subreddit_exists:");
+    HANDLE_STATUS("subreddit_exists");
     HANDLE_RATELIMIT;
     return query;
 }

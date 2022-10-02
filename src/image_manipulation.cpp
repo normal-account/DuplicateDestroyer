@@ -142,6 +142,35 @@ double get_string_similarity(const std::string &first, const std::string &second
     return 100.0;
 }
 
-cv::Size Image::get_dimensions() {
+std::string Image::prepare_word( std::string &word )
+{
+    std::string newWord;
+    newWord.reserve(word.size());
+    for (char i : word) {
+        if (i >= 'a') //
+            newWord.push_back(i);
+        else if (i >= 'A' && i <= 'Z')
+            newWord.push_back(i + 0x20);
+    }
+    return newWord;
+}
+
+std::string Image::filter_non_words( const std::set<std::string> &dict ) const
+{
+    std::string filteredOcr;
+    filteredOcr.reserve(ocrText.size());
+    std::stringstream ocrStream(ocrText);
+    std::string word;
+    do {
+        ocrStream >> word;
+        if (dict.contains(word))
+            filteredOcr.append(prepare_word(word)).append(" ");
+    } while(ocrStream);
+    std::cout << "Before {" << ocrText << "}" << std::endl;
+    std::cout << "After  {" << filteredOcr << "}" << std::endl;
+    return filteredOcr;
+}
+
+cv::Size Image::get_dimensions() const {
     return matrix.size();
 }

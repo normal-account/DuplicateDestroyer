@@ -27,10 +27,11 @@ std::shared_ptr<RowResult> db_interface::get_image_rows() {
     return std::make_shared<RowResult>(query.execute());
 }
 
+// TODO: Change is_video to is_link......
 std::shared_ptr<RowResult> db_interface::get_link_rows() {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*").where("'is_link' = 1");
+    auto query = table.select("*").where("is_video = 1");
     return std::make_shared<RowResult>(query.execute());
 }
 
@@ -59,6 +60,14 @@ std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
     auto table = db.getTable(subreddit);
     auto query = table.select("ocr_hash").where("'8pxhash' is not null and '10pxhash' is not null and 'ocrstring' is not null");
     return ocr_strings;
+}
+
+bool db_interface::settings_exist(const std::string &sub)
+{
+    auto db = session.getSchema("all_reposts");
+    auto table = db.getTable("SubredditSettings");
+    auto query = table.select("'subreddit' = '" + sub + "'").execute();
+    return query.count() > 0;
 }
 
 std::shared_ptr<std::vector<mpz_class>> db_interface::get_8x8_hashes()

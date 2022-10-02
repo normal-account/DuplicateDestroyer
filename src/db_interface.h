@@ -44,6 +44,8 @@ public:
         this->subreddit = std::move(sub);
     }
 
+    [[nodiscard]] bool settings_exist(const std::string &sub);
+
     bool subreddit_table_exists(const std::string &sub);
 
     void update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value);

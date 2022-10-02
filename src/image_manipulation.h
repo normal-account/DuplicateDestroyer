@@ -19,7 +19,7 @@ public:
    Mat matrix;
    std::string ocrText;
 
-   int compareHash(const mpz_class &hash1, const mpz_class &hash2);
+   static int compareHash(const mpz_class &hash1, const mpz_class &hash2);
    int compareHash10x10(const mpz_class& hash);
    int compareHash8x8(const mpz_class& hash);
    void computeHash10x10();
@@ -28,8 +28,11 @@ public:
    [[nodiscard]] mpz_class getHash8x8() { return hash8x8; }
    // Used for OCR text and title comparison
    void extract_text();
+   [[nodiscard]] static inline std::string prepare_word(std::string &word);
    [[nodiscard]] std::string get_text() const { return ocrText; }
-   cv::Size get_dimensions();
+   [[nodiscard]] std::string filter_non_words(const std::set<std::string> &dict) const;
+   [[nodiscard]] cv::Size get_dimensions() const;
+
 
 private:
 
