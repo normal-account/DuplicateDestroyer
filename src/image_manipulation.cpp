@@ -1,6 +1,6 @@
 #include "image_manipulation.h"
 
-extern tesseract::TessBaseAPI* tessBaseApi;
+extern tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];
 
 // There is some precision loss with the GMP library. Getting a max of +- 200 difference on the final hash on each
 // execution. This is caused by the nature of GMP, which stores big integers like floats. It should not be an issue
@@ -98,12 +98,14 @@ int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
     return mediaSimilarity;
 }
 
-void Image::extract_text()
+void Image::extract_text(int threadNumber)
 {
+
+    auto api = tessBaseApi[threadNumber];
     char *outText;
     Pix *pix = pixRead(IMAGE_NAME);
-    tessBaseApi->SetImage( pix);
-    outText = tessBaseApi->GetUTF8Text();
+    api->SetImage( pix );
+    outText = api->GetUTF8Text();
     ocrText = outText;
     delete outText;
 }

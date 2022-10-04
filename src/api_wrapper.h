@@ -8,10 +8,13 @@
 
 class ApiWrapper
 {
+   int NUMBER_THREADS;
    std::string token;
    unsigned long long timeToExpire = 0;
 
 public:
+   void set_number_threads(int NUMBER_THREADS) { this->NUMBER_THREADS = NUMBER_THREADS; }
+
    void send_message( const std::string &user, const std::string &content, const std::string &subject );
 
    void remove_submission( const std::string &id );
@@ -20,7 +23,7 @@ public:
 
    cpr::Response fetch_top_submissions(const std::string &sub, const std::string &range);
 
-   static cpr::Response fetch_token();
+   cpr::Response fetch_token();
 
    void set_token( const std::string &newToken );
 

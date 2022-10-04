@@ -7,12 +7,11 @@
 #include "utils.h"
 #include <list>
 
-tesseract::TessBaseAPI* tessBaseApi;
 ApiWrapper apiWrapper;
 db_interface interface( (Session("localhost", 33060, "db_user", "soleil")));
 std::set<std::string> dictionnary;
 std::vector<std::thread> benchmarkThreads;
-int NUMBER_THREADS = 1;
+tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];
 std::binary_semaphore setSemaphore{1};
 
 using namespace ::mysqlx;
@@ -26,6 +25,7 @@ unsigned long long get_unix_time() {
 // Should be done only once the original token expires.
 void initialize_token()
 {
+    apiWrapper.set_number_threads(NUMBER_THREADS);
     cpr::Response tokenQuery = apiWrapper.fetch_token();
     json jsonToken = json::parse( tokenQuery . text );
     std::string ogToken = "bearer ";
@@ -36,24 +36,29 @@ void initialize_token()
 }
 
 void destroy_tesseract() {
-    tessBaseApi->End();
-    delete tessBaseApi;
+    for (auto &i : tessBaseApi)
+    {
+        i -> End();
+        delete i;
+    }
 }
 
 void initialize_tesseract()
 {
-    tessBaseApi = new tesseract::TessBaseAPI();
-    // Initialize tesseract-ocr with English, without specifying tessdata path
-    if (tessBaseApi->Init( nullptr, "eng")) {
-        fprintf(stderr, "Could not initialize tesseract.\n");
-        exit(1);
-    }
+    for (auto &i : tessBaseApi) {
+        i = new tesseract::TessBaseAPI();
+        // Initialize tesseract-ocr with English, without specifying tessdata path
+        if (i->Init( nullptr, "eng")) {
+            fprintf(stderr, "Could not initialize tesseract.\n");
+            exit(1);
+        }
 
-    // Or PSM_AUTO_OSD for extra info (OSD). Difference not significant.
-    // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
-    tessBaseApi->SetVariable("debug_file", "/dev/null");
-    tessBaseApi->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
-    atexit(( destroy_tesseract ));
+        // Or PSM_AUTO_OSD for extra info (OSD). Difference not significant.
+        // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
+        i->SetVariable("debug_file", "/dev/null");
+        i->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
+        atexit(( destroy_tesseract ));
+    }
 }
 
 
@@ -283,7 +288,7 @@ std::string get_last_word(std::string &s) {
 void process_image(Image &image, const std::string &url, int threadNumber) {
     apiWrapper.download_image(url, threadNumber);
     image.matrix = imread(IMAGE_NAME);
-    image.extract_text();
+    image . extract_text(threadNumber);
 
     image.computeHash8x8();
     image . computeHash10x10();

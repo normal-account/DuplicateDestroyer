@@ -8,6 +8,8 @@
 #include <leptonica/allheaders.h>
 #define IMAGE_NAME "image_in_process"
 
+const int NUMBER_THREADS = 1;
+
 using namespace cv;
 using namespace std;
 
@@ -27,7 +29,7 @@ public:
    [[nodiscard]] mpz_class getHash10x10() { return hash10x10; };
    [[nodiscard]] mpz_class getHash8x8() { return hash8x8; }
    // Used for OCR text and title comparison
-   void extract_text();
+   void extract_text(int threadNumber);
    [[nodiscard]] static inline std::string prepare_word(std::string &word);
    [[nodiscard]] std::string get_text() const { return ocrText; }
    [[nodiscard]] std::string filter_non_words(const std::set<std::string> &dict) const;

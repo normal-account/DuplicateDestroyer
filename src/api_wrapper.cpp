@@ -3,7 +3,7 @@
 
 #define HEADERS cpr::Header{{"Authorization", token}}, cpr::VerifySsl(false), cpr::UserAgent(USER_AGENT))
 #define HANDLE_STATUS(X) if (query.status_code != 200) throw std::runtime_error(X + query.text)
-#define HANDLE_RATELIMIT if (stoi(query.header["X-Ratelimit-Remaining"]) == 0) { sleep(stoi(query.header["x-ratelimit-reset"])); std::cerr << "SLEPT" << std::endl; }
+#define HANDLE_RATELIMIT if (stoi(query.header["X-Ratelimit-Remaining"]) < NUMBER_THREADS) { sleep(stoi(query.header["x-ratelimit-reset"])); std::cerr << "SLEPT" << std::endl; }
 
 
 
