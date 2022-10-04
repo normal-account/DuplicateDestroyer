@@ -5,7 +5,8 @@
 #include "db_interface.h"
 
 
-std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::string& hash_type) {
+std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::string &subreddit, const std::string& hash_type) {
+    dbSemaphore.acquire();
     auto hashes = std::make_shared<std::vector<mpz_class>>();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
@@ -17,80 +18,89 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
         mpzHash.set_str(it.get<std::string>(), 10);
         hashes->push_back(mpzHash);
     }
+    dbSemaphore.release();
     return hashes;
 }
 
-std::shared_ptr<RowResult> db_interface::get_image_rows() {
+std::shared_ptr<RowResult> db_interface::get_image_rows(const std::string &subreddit) {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
     auto query = table.select("*").where("'8pxhash' is not null and '10pxhash' is not null and 'ocrstring' is not null");
-    return std::make_shared<RowResult>(query.execute());
+    auto res = std::make_shared<RowResult>(query.execute());
+    dbSemaphore.release();
+    return res;
 }
 
-// TODO: Change is_video to is_link......
-std::shared_ptr<RowResult> db_interface::get_link_rows() {
+std::shared_ptr<RowResult> db_interface::get_link_rows(const std::string &subreddit) {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
     auto query = table.select("*").where("is_link = 1");
-    return std::make_shared<RowResult>(query.execute());
+    auto res = std::make_shared<RowResult>(query.execute());
+    dbSemaphore.release();
+    return res;
 }
 
-std::shared_ptr<RowResult> db_interface::get_title_rows(int minTitleLength) {
+std::shared_ptr<RowResult> db_interface::get_title_rows(const std::string &subreddit, int minTitleLength) {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
     auto query = table.select("*").where("length(title) > " + std::to_string(minTitleLength));
-    return std::make_shared<RowResult>(query.execute());
+    auto res = std::make_shared<RowResult>(query.execute());
+    dbSemaphore.release();
+    return res;
 }
 
-void db_interface::insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id, const std::string &author,
-                                      const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url)
+void db_interface::insert_submission( const std::string &subreddit, const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id,
+                                      const std::string &author, const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url)
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
     if (ocrtext.size() > 300)
         table.insert().values(ocrtext.substr(0, 300), tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
     else
         table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
-}
-
-std::shared_ptr<std::vector<std::string>> db_interface::get_ocr_strings()
-{
-    auto db = session.getSchema("all_reposts");
-    auto ocr_strings = std::make_shared<std::vector<std::string>>();
-    auto table = db.getTable(subreddit);
-    auto query = table.select("ocr_hash").where("'8pxhash' is not null and '10pxhash' is not null and 'ocrstring' is not null");
-    return ocr_strings;
+    dbSemaphore.release();
 }
 
 bool db_interface::settings_exist(const std::string &sub)
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
     auto query = table.select("'subreddit' = '" + sub + "'").execute();
-    return query.count() > 0;
+    bool res = query.count() > 0;
+    dbSemaphore.release();
+    return res;
 }
 
-std::shared_ptr<std::vector<mpz_class>> db_interface::get_8x8_hashes()
+std::shared_ptr<std::vector<mpz_class>> db_interface::get_8x8_hashes(const std::string &subreddit)
 {
-    return get_hashes("8pxhash");
+    return get_hashes(subreddit, "8pxhash");
 }
 
-std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes()
+std::shared_ptr<std::vector<mpz_class>> db_interface::get_10x10_hashes(const std::string &subreddit)
 {
-    return get_hashes("10pxhash");
+    return get_hashes(subreddit, "10pxhash");
 }
 
 bool db_interface::subreddit_table_exists( const std::string &sub )
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(sub, false);
-    return table.existsInDatabase();
+    bool res = table.existsInDatabase();
+    dbSemaphore.release();
+    return res;
 }
 
 // Table containing analyzed submissions.
 // WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call.
 void db_interface::create_table_duplicates( const std::string &sub )
 {
+    dbSemaphore.acquire();
     session.sql("use all_reposts").execute(); // Required
     session.sql("create table " + sub + " ("
                 "ocrstring varchar(300),"
@@ -104,57 +114,80 @@ void db_interface::create_table_duplicates( const std::string &sub )
                 "title varchar(301),"
                 "url varchar(300)"
                 ");").execute();
+    dbSemaphore.release();
 }
 
 // Table containing saved submissions
 // WARNING : This function is possibly vulnerable to SQL injection. The 'sub' parameter must be carefully checked before call.
 void db_interface::create_table_saved( const std::string &sub )
 {
+    dbSemaphore.acquire();
     session.sql("use all_reposts").execute(); // Required
     session.sql("create table " + sub + "_saved (id varchar(10));").execute();
+    dbSemaphore.release();
 }
 
 void db_interface::save_submission( const std::string &sub, const std::string &id )
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(sub + "_saved");
     table.insert().values(id).execute();
+    dbSemaphore.release();
 }
 
 bool db_interface::is_submission_saved( const std::string &sub, const std::string &id )
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(sub + "_saved");
-    return table.select("*").where("id = '" + id + "'").execute().count() > 0;
+    bool saved = table.select("*").where("id = '" + id + "'").execute().count() > 0;
+    dbSemaphore.release();
+    if (!saved)
+        newSubmissions++;
+    return saved;
 }
 
 mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
 
     std::string where = "subreddit = '" + name + "'";
     auto row = table.select("*").where(where).execute();
-    //assert(row.count());
-    if (row.count() == 0)
+    bool empty = row.count() == 0;
+    dbSemaphore.release();
+
+    if (empty)
         throw std::runtime_error("Empty subreddit settings on " + name);
     return row;
 }
 
 void db_interface::update_subreddit_settings(const std::string& sub, const std::string &parameter, const std::string &value) {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
     std::string where = "subreddit = '" + sub + "'";
     table.update().set(parameter, value).where(where).execute();
+    dbSemaphore.release();
 }
 
 void db_interface::add_settings_row( const std::string &sub )
 {
+    dbSemaphore.acquire();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
     // TODO : Revisit default values
     table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 1, 0, 85, 95, 10, 5, 80).execute();
+    dbSemaphore.release();
 }
 
+unsigned db_interface::get_new_submissions()
+{
+    size_t count = newSubmissions;
+    newSubmissions = 0;
+    return count;
+}
 
 
 

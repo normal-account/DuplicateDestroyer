@@ -26,11 +26,11 @@ public:
 
    void set_time_expire ( unsigned long long unixTime );
 
-   unsigned long long get_time_expire() const;
+   [[nodiscard]] unsigned long long get_time_expire() const;
 
    cpr::Response fetch_messages();
 
-   static void download_image( const std::string &url );
+   static void download_image( const std::string &url, int threadNumber );
 
    cpr::Response submit_comment( const std::string &content, const std::string &id );
 

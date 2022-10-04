@@ -65,7 +65,7 @@ cpr::Response ApiWrapper::fetch_submissions()
 {
     auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/r/mod/new"},
                      cpr::Parameters{{"g",     "GLOBAL"},
-                                     {"limit", "200"}},
+                                     {"limit", "100"}},
     HEADERS;
     HANDLE_STATUS("fetch_submissions");
     return query;
@@ -130,7 +130,7 @@ void ApiWrapper::accept_invite( const std::string &subreddit )
 }
 
 
-void ApiWrapper::download_image( const std::string &url )
+void ApiWrapper::download_image( const std::string &url, int threadNumber)
 {
 
     cpr::Response query = cpr::Get( cpr::Url{url},
@@ -138,7 +138,7 @@ void ApiWrapper::download_image( const std::string &url )
                                          cpr::UserAgent( USER_AGENT ));
 
     HANDLE_STATUS("download");
-    std::ofstream tempFile( IMAGE_NAME );
+    std::ofstream tempFile( IMAGE_NAME + std::to_string(threadNumber) );
     tempFile << query . text;
 }
 

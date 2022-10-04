@@ -5,14 +5,17 @@
 #include <memory>
 #include <utility>
 #include <gmpxx.h>
+#include <atomic>
+#include <semaphore>
 
 using namespace ::mysqlx;
 class db_interface
 {
 private:
+   std::atomic<unsigned> newSubmissions = 0;
    Session session;
-   std::string subreddit;
-   std::shared_ptr<std::vector<mpz_class>> get_hashes(const std::string &hash_type);
+   std::shared_ptr<std::vector<mpz_class>> get_hashes(const std::string &subreddit, const std::string &hash_type);
+   std::binary_semaphore dbSemaphore{1};
 
 public:
     db_interface( Session newSession ) : session(std::move( newSession ))
@@ -22,27 +25,22 @@ public:
         std::cout << table.count() << std::endl;
     }
 
-    std::shared_ptr<std::vector<mpz_class>> get_8x8_hashes();
+    std::shared_ptr<std::vector<mpz_class>> get_8x8_hashes(const std::string &subreddit);
 
     RowResult get_subreddit_settings(const std::string &name);
 
-    std::shared_ptr<std::vector<mpz_class>> get_10x10_hashes();
+    std::shared_ptr<std::vector<mpz_class>> get_10x10_hashes(const std::string &subreddit);
 
-    std::shared_ptr<std::vector<std::string>> get_ocr_strings();
+    void insert_submission( const std::string &subreddit, const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id,
+                            const std::string &author, const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url );
 
-    void insert_submission( const std::string &ocrtext, const std::string &tenpx, const std::string &eightpx, const std::string &id, const std::string &author,
-                            const std::string &dimensions, long long int date, bool isVideo, const std::string &title, const std::string &url );
+    std::shared_ptr<RowResult> get_image_rows(const std::string &subreddit);
 
+    std::shared_ptr<RowResult> get_link_rows(const std::string &subreddit);
 
-    std::shared_ptr<RowResult> get_image_rows();
+    std::shared_ptr<RowResult> get_title_rows(const std::string &subreddit, int minTitleLength);
 
-    std::shared_ptr<RowResult> get_link_rows();
-
-    std::shared_ptr<RowResult> get_title_rows(int minTitleLength);
-
-    void switch_subreddit(std::string sub) {
-        this->subreddit = std::move(sub);
-    }
+    //void switch_subreddit(std::string sub) { this->subreddit = std::move(sub); }
 
     [[nodiscard]] bool settings_exist(const std::string &sub);
 
@@ -59,6 +57,8 @@ public:
     void save_submission( const std::string &sub, const std::string &id );
 
     bool is_submission_saved( const std::string &sub, const std::string &id );
+
+    unsigned get_new_submissions();
 };
 
 
