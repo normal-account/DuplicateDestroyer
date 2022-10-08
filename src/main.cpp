@@ -185,6 +185,7 @@ bool determine_report(int imageSimilarity, int imageThreshold, double textSimila
            || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
+//
 std::string get_modmail_footer(const std::string &sub, const std::string &context) {
     std::string modmailContent;
     modmailContent.append(MODMAIL_FOOTER_1).append(sub).append(MODMAIL_FOOTER_2).append(context).append(MODMAIL_FOOTER_3);
@@ -646,8 +647,11 @@ void parse_subreddit_settings(const Message &message, int threadNumber) {
         response.append(UPDATE_SUCCESS).append(successes.substr(0, successes.size()-1)).append("\n\n");
     if (!failures.empty())
         response.append(UPDATE_FAILURE).append(failures.substr(0, failures.size()-1)).append("\n\n");
-    response.append(get_subreddit_settings_list(message.subreddit.value(), threadNumber));
-    apiWrapper.submit_comment(response, message.fullname);
+    // Only submit comment if settings have been parsed
+    if (!failures.empty() || !successes.empty()) {
+        response.append(get_subreddit_settings_list(message.subreddit.value(), threadNumber));
+        apiWrapper.submit_comment(response, message.fullname);
+    }
 }
 
 void iterate_messages(int threadNumber=0) {
@@ -691,10 +695,10 @@ void iterate_messages(int threadNumber=0) {
                 interfaces[threadNumber]->create_table_saved( subredditWithoutR );
 
             apiWrapper.accept_invite(subreddit);
-            import_submissions(subredditWithoutR, threadNumber);
             std::string content;
             content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR, threadNumber));
             apiWrapper.submit_comment(content, message.id);
+            import_submissions(subredditWithoutR, threadNumber);
             continue;
         }
 
@@ -718,9 +722,10 @@ unsigned calculate_sleep() {
  * Reports 9/10
  * */
 // TODO : Separate methods between files
-
+// TODO : Check ratelimiting
 int main()
 {
+    assert(NUMBER_THREADS >= 1);
     int count = 0;
     initialize_tesseract();
     initialize_db_instances();

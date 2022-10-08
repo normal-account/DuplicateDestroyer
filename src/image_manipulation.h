@@ -8,7 +8,7 @@
 #include <leptonica/allheaders.h>
 //#define IMAGE_NAME "image_in_process"
 
-const int NUMBER_THREADS = 1;
+const int NUMBER_THREADS = 15;
 
 using namespace cv;
 using namespace std;

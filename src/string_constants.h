@@ -57,7 +57,7 @@ const std::string MODMAIL_FOOTER_1 = "\n\nI am a bot. If you believe this was se
                                    "(https://www.reddit.com/message/compose?to=%2Fr%2F";
 // Subreddit between
 const std::string MODMAIL_FOOTER_2 = "&subject=My+post+has+been+wrongfully+removed&message=My%20post%20has%20been%20wrongfully%20removed%20by%20your%20repost%20bot,%20/u/"
-                                     "DuplicateDestroyer. [Here%20is%20a%20link%20to%20my%20post](";
+                                     "DuplicateDestroyer. Here%20is%20a%20link%20to%20my%20post : ";
 // Submission shortlink between
 const std::string MODMAIL_FOOTER_3 = "). **Do not delete your post or moderators won't be able to review it.**";
 

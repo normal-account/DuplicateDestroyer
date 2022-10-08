@@ -15,7 +15,6 @@ private:
    std::atomic<unsigned> newSubmissions = 0;
    Session session;
    std::shared_ptr<std::vector<mpz_class>> get_hashes(const std::string &subreddit, const std::string &hash_type);
-   std::binary_semaphore dbSemaphore{1};
 
 public:
     db_interface( Session newSession ) : session(std::move( newSession ))

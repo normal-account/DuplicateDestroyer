@@ -68,6 +68,7 @@ cpr::Response ApiWrapper::fetch_submissions()
                                      {"limit", "100"}},
     HEADERS;
     HANDLE_STATUS("fetch_submissions");
+    std::cout << "LEFT : " << stoi(query.header["X-Ratelimit-Remaining"]) << " and reset in " << stoi(query.header["x-ratelimit-reset"]) << std::endl; // TODO: REMOVE
     return query;
 }
 
