@@ -7,10 +7,9 @@
 #include "utils.h"
 #include <list>
 
-ApiWrapper apiWrapper;
-db_interface interface( (Session("localhost", 33060, "db_user", "soleil")));
-std::set<std::string> dictionnary;
-std::vector<std::thread> benchmarkThreads;
+ApiWrapper apiWrapper(NUMBER_THREADS);
+std::vector<std::thread*> benchmarkThreads;
+db_interface *interfaces[NUMBER_THREADS + 1];
 tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];
 std::binary_semaphore setSemaphore{1};
 
@@ -23,10 +22,9 @@ unsigned long long get_unix_time() {
 }
 
 // Should be done only once the original token expires.
-void initialize_token()
+void initialize_token(int threadNumber)
 {
-    apiWrapper.set_number_threads(NUMBER_THREADS);
-    cpr::Response tokenQuery = apiWrapper.fetch_token();
+    cpr::Response tokenQuery = apiWrapper.fetch_token(threadNumber);
     json jsonToken = json::parse( tokenQuery . text );
     std::string ogToken = "bearer ";
     ogToken . append( jsonToken[ "access_token" ] );
@@ -35,12 +33,17 @@ void initialize_token()
     apiWrapper.set_time_expire(get_unix_time() + expiresIn);
 }
 
-void destroy_tesseract() {
+void destroy_instances() {
     for (auto &i : tessBaseApi)
     {
         i -> End();
         delete i;
     }
+
+    for (auto &i : interfaces) {
+        delete i;
+    }
+    std::cout << "[DELETED INSTANCES]" << std::endl;
 }
 
 void initialize_tesseract()
@@ -57,31 +60,14 @@ void initialize_tesseract()
         // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
         i->SetVariable("debug_file", "/dev/null");
         i->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
-        atexit(( destroy_tesseract ));
     }
 }
 
-
-// NOTE : Filtering non-words seemed interesting at first, but it greatly reduced the amount of detected reposts (more than 50%).
-// May also reduce false positives but I doubt it since you're essentially losing data. This function will remain unused for the moment.
-void initialize_dictionnary() {
-    std::string word;
-
-    std::ifstream usDict("/usr/share/dict/american-english");
-    while (getline (usDict, word)) {
-        if (word.size() > 1)
-            dictionnary.insert(word);
+void initialize_db_instances() {
+    for (auto &interface : interfaces) {
+        interface = new db_interface(Session("localhost", 33060, "db_user", "soleil"));
     }
-    usDict.close();
-
-    std::ifstream ukDict("/usr/share/dict/british-english");
-    while (getline (ukDict, word)) {
-        if (word.size() > 1)
-            dictionnary.insert(word);
-    }
-    ukDict.close();
 }
-
 
 bool is_number(const std::string& s)
 {
@@ -135,7 +121,7 @@ std::string create_markdown_header( const std::string &author, const std::string
     return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_HEADER;
 }
 
-std::string create_image_markdown_row( int number, int similarity, Row &row, long long submissionTime) {
+std::string create_image_markdown_row( int number, int similarity, Row row, long long submissionTime) {
     auto id = row.get(DB_ID).get<std::string>();
     auto author = row.get(DB_AUTHOR).get<std::string>();
     auto dimensions = row.get(DB_DIMENSIONS).get<std::string>();
@@ -226,29 +212,29 @@ void post_action_comment( std::string commentContent, const std::vector<std::str
     }
 }
 
-bool search_image_duplicates( const Submission &submission, const SubredditSetting &settings, Image &image) {
+bool search_image_duplicates( const Submission &submission, const SubredditSetting &settings, Image &image, int threadNumber) {
     std::string commentContent;
     mpz_class hash; mpz_class mpzhash;
     int numberDuplicates = 0;
     std::vector<std::string> reportComment; std::vector<std::string> removeComment;
 
-    auto query = interface.get_image_rows(submission.subreddit);
+    auto query = interfaces[threadNumber]->get_image_rows( submission.subreddit);
 
     commentContent.append(create_image_markdown_header( submission . author, unix_time_to_string( submission . created ), dimensions_to_string( image . get_dimensions())));
     std::string imageOcrString = image.get_text();//image.filter_non_words(dictionnary);
 
-    for (auto row : *query) {
+    for (auto row = query->begin(); row != query->end(); ++row) {
         if (numberDuplicates > settings.removal_table_duplicate_number)
             break;
 
-        if (get_days_interval(row.get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
+        if (get_days_interval((*row).get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
-        std::string ocrSTR = row.get(DB_OCRSTRING).get<std::string>();
+        std::string ocrSTR = (*row).get(DB_OCRSTRING).get<std::string>();
 
         int strSimilarity = (int)get_string_similarity(ocrSTR, imageOcrString);
 
-        std::string strhash = row.get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
+        std::string strhash = (*row).get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
@@ -257,16 +243,16 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
             //std::cout << " (REMOVED)";
             numberDuplicates++;
-            removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
+            removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, *row, submission . created ));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
-            strhash = row.get(DB_8PXHASH).get<std::string>();
+            strhash = (*row).get(DB_8PXHASH).get<std::string>();
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
 
             if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
                 //std::cout << " (REPORTED)";
                 numberDuplicates++;
-                reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, row, submission . created ));
+                reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, *row, submission . created ));
             }
         }
         //std::cout << std::endl;
@@ -286,8 +272,8 @@ std::string get_last_word(std::string &s) {
 }
 
 void process_image(Image &image, const std::string &url, int threadNumber) {
-    apiWrapper.download_image(url, threadNumber);
-    image.matrix = imread(IMAGE_NAME);
+    ApiWrapper::download_image(url, Image::determine_image_name(threadNumber));
+    image.matrix = imread(Image::determine_image_name(threadNumber));
     image . extract_text(threadNumber);
 
     image.computeHash8x8();
@@ -298,14 +284,14 @@ void process_image(Image &image, const std::string &url, int threadNumber) {
 bool handle_image(const Submission &submission, const SubredditSetting &settings, Image &image, const std::string &url, int threadNumber) {
     std::string commentContent;
     process_image(image, url, threadNumber);
-    bool submissionRemoved = search_image_duplicates( submission, settings, image );
+    bool submissionRemoved = search_image_duplicates( submission, settings, image, threadNumber);
 
     return submissionRemoved;
 }
 
-bool handle_link(const Submission &submission, const SubredditSetting &settings) {
+bool handle_link(const Submission &submission, const SubredditSetting &settings, int threadNumber) {
     std::string commentContent;
-    auto query = interface.get_link_rows(submission.subreddit);
+    auto query = interfaces[threadNumber]->get_link_rows( submission.subreddit);
 
     commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created ), MARKDOWN_TABLE_LINK));
 
@@ -345,11 +331,11 @@ bool handle_link(const Submission &submission, const SubredditSetting &settings)
     return numberDuplicates > 0;
 }
 
-bool handle_title(const Submission &submission, const SubredditSetting &settings) {
+bool handle_title(const Submission &submission, const SubredditSetting &settings, int threadNumber) {
     std::string commentContent;
     std::vector<std::string> reportComment; std::vector<std::string> removeComment;
 
-    auto query = interface.get_title_rows(submission.subreddit, settings.min_title_length_to_enforce);
+    auto query = interfaces[threadNumber]->get_title_rows( submission.subreddit, settings.min_title_length_to_enforce);
 
     commentContent.append( create_markdown_header( submission . author, unix_time_to_string( submission . created ), MARKDOWN_TABLE_TITLE));
 
@@ -380,7 +366,7 @@ bool handle_title(const Submission &submission, const SubredditSetting &settings
     return numberDuplicates > 0;
 }
 
-void import_submissions(const std::string &subreddit, int threadNumber=0) {
+void import_submissions(const std::string &subreddit, int threadNumber) {
     for (const std::string &range : {"month", "year", "all"}) {
         cpr::Response submissionQuery = apiWrapper.fetch_top_submissions(subreddit, range);
 
@@ -389,10 +375,10 @@ void import_submissions(const std::string &subreddit, int threadNumber=0) {
         for (auto &submissionIter : submissionList) {
             try {
                 Submission submission(submissionIter[ "data" ]);
-                if (interface.is_submission_saved(submission.subreddit, submission.id))
+                if (interfaces[threadNumber]->is_submission_saved( submission.subreddit, submission.id))
                     continue;
                 else
-                    interface.save_submission(submission.subreddit, submission.id);
+                    interfaces[threadNumber]->save_submission( submission.subreddit, submission.id);
 
                 if (submission.type == IMAGE || submission.type == VIDEO) {
                     Image image; // TODO: Code repeated here... figure out a way to plug-in a function
@@ -400,15 +386,15 @@ void import_submissions(const std::string &subreddit, int threadNumber=0) {
                         for (const std::string &url : submission.galleryUrls)
                         {
                             process_image(image, url, threadNumber);
-                            interface.insert_submission(submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+                            interfaces[threadNumber]->insert_submission( submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string( image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
                         }
                     } else {
                         process_image(image, submission.url, threadNumber);
-                        interface.insert_submission(submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
+                        interfaces[threadNumber]->insert_submission( submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string( image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
                     }
                 }
                 else {
-                    interface.insert_submission(submission.subreddit, "", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+                    interfaces[threadNumber]->insert_submission( submission.subreddit, "", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
                 }
             } catch (std::exception &e) {
                 std::cerr << "IMPORT SUBMISSIONS:" << e.what() << std::endl;
@@ -417,21 +403,24 @@ void import_submissions(const std::string &subreddit, int threadNumber=0) {
     }
 }
 
-void insert_submission(const Submission &submission, Image &image, bool isMedia) {
+void insert_submission(const Submission &submission, Image &image, bool isMedia, int threadNumber) {
     if (isMedia) {
         if ( submission . isGallery )
         {
             for ( const auto &url : submission . galleryUrls )
-                interface.insert_submission(submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
+                interfaces[threadNumber]->insert_submission( submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string( image.get_dimensions()), submission.created, submission.type == LINK, submission.title, url);
         } else
-            interface.insert_submission(submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string(image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
+            interfaces[threadNumber]->insert_submission( submission.subreddit, image.ocrText, image.getHash10x10().get_str(), image.getHash8x8().get_str(), submission.id, submission.author, dimensions_to_string( image.get_dimensions()), submission.created, submission.type == LINK, submission.title, submission.url);
     }
     else // link or selftext
-        interface.insert_submission(submission.subreddit, "", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
+        interfaces[threadNumber]->insert_submission( submission.subreddit, "", "", "", submission.id, submission.author, "", submission.created, submission.type == LINK, submission.title, submission.url);
 }
 
 void process_submission(bool *finished, std::set<std::string> *sub2thread, std::set<std::string> *requiredOrder, const Submission &submission, const SubredditSetting &settings, int threadNumber) {
     try {
+        interfaces[threadNumber]->save_submission( submission . subreddit, submission . id );
+
+        std::cout << "Thread " << threadNumber << " for '" << submission.title << "'" << std::endl;
         bool submissionRemoved = false;
 
         bool isMedia = ( submission . type == IMAGE && settings . enforce_images ) ||
@@ -448,16 +437,16 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
                 submissionRemoved = handle_image( submission, settings, image, submission . url, threadNumber);
         } // 2 - submission is a link
         else if ( settings . enforce_links && submission.type == LINK )
-            submissionRemoved = handle_link( submission, settings );
+            submissionRemoved = handle_link( submission, settings, threadNumber);
 
         // 3 - Submission is either a media or a link, but no duplicates have been found   ;  search for titles
         if ( !submissionRemoved && settings . enforce_titles && submission . title . size() >= settings . min_title_length_to_enforce )
         {
-            submissionRemoved = handle_title( submission, settings );
+            submissionRemoved = handle_title( submission, settings, threadNumber );
         }
 
         if (!submissionRemoved)
-            insert_submission(submission, image, isMedia);
+            insert_submission(submission, image, isMedia, threadNumber);
 
     } catch (std::exception &e) {
         std::cerr << "EXCEPTION ON THREAD-SHARING:" << e.what() << std::endl;
@@ -468,6 +457,7 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
     requiredOrder->insert(submission.subreddit); // sure, we've freed the sub, but not until the loop has started over
     setSemaphore.release();
 
+    std::cout << "Finished" << std::endl;
     *finished = true;
 }
 
@@ -506,10 +496,9 @@ void populate_list(std::list<Submission> &submissionList, json &submissionJSON) 
         try
         {
             Submission submission( submissionIter . value()[ "data" ] );
-            if ( !interface . is_submission_saved( submission . subreddit, submission . id ))
+            if ( !interfaces[NUMBER_THREADS]->is_submission_saved( submission . subreddit, submission . id ))
             {
                 submissionList.push_back(submission);
-                interface . save_submission( submission . subreddit, submission . id );
             }
 
         } catch ( std::exception &e )
@@ -531,8 +520,8 @@ void iterate_submissions() {
 
     benchmarkThreads.reserve(NUMBER_THREADS);
 
-    bool finished[NUMBER_THREADS]; for (int i = 0; i < NUMBER_THREADS; i++) finished[i] = true;
-    bool alreadyCalled[NUMBER_THREADS]; for (int i = 0; i < NUMBER_THREADS; i++) alreadyCalled[i] = false;
+    bool finished[NUMBER_THREADS]; for (bool & i : finished) i = true;
+    bool alreadyCalled[NUMBER_THREADS]; for (bool & i : alreadyCalled) i = false;
 
     std::set<std::string> sub2thread; // Indicates if a given subreddit has a submission being treated in a thread
 
@@ -551,7 +540,7 @@ void iterate_submissions() {
         {
             auto &submission = *it;
 
-            RowResult settingsQuery = interface . get_subreddit_settings( submission . subreddit );
+            RowResult settingsQuery = interfaces[NUMBER_THREADS]->get_subreddit_settings( submission . subreddit );
             SubredditSetting settings( settingsQuery );
             if ( !settings . enabled )
             {
@@ -573,9 +562,12 @@ void iterate_submissions() {
                 if (!alreadyCalled[thread])
                     alreadyCalled[thread] = true;
                 else {
-                    benchmarkThreads[thread].join();
+                    std::cout << "Joined " << thread << std::endl; // TODO: REMOVE
+                    benchmarkThreads[thread]->join();
+                    delete benchmarkThreads[thread];
                 }
-                benchmarkThreads[thread] = std::thread(process_submission, finished + thread, &sub2thread, &requiredOrder, submission, settings, thread);
+                benchmarkThreads[thread] = new std::thread(process_submission, finished + thread, &sub2thread, &requiredOrder, submission, settings, thread);
+                //sleep(15);
                 next_iteration(it, submissionList);
             }
             else
@@ -583,8 +575,10 @@ void iterate_submissions() {
         }
     }
     for (int i = 0; i < NUMBER_THREADS; i++) {
-        if (alreadyCalled[i])
-            benchmarkThreads[i].join();
+        if (alreadyCalled[i]) {
+            benchmarkThreads[i]->join();
+            std::cout << "Joined " << i << std::endl; // TODO: REMOVE
+        }
     }
 }
 
@@ -596,8 +590,8 @@ std::string int_row(Row &row, int pos) {
     return std::to_string(row.get(pos).get<int>());
 }
 
-std::string get_subreddit_settings_list(const std::string &sub) {
-    auto row = interface.get_subreddit_settings(sub).fetchOne();
+std::string get_subreddit_settings_list(const std::string &sub, int threadNumber) {
+    auto row = interfaces[threadNumber]->get_subreddit_settings( sub).fetchOne();
 
     char *settingsChar = new char[2000]; // 2000 is very generous
 
@@ -620,7 +614,7 @@ bool subreddit_exists(const std::string &sub) {
     return !json["subreddits"].empty();
 }
 
-void parse_subreddit_settings(const Message &message) {
+void parse_subreddit_settings(const Message &message, int threadNumber) {
     std::stringstream messageStream(message.body);
     std::string parameter; std::string value;
     std::string successes; std::string failures;
@@ -630,7 +624,7 @@ void parse_subreddit_settings(const Message &message) {
         if (BOOLEAN_SETTINGS.contains(parameter)) {
             messageStream >> value;
             if (value == "true" || value == "false") {
-                interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value == "true" ? "1" : "0");
+                interfaces[threadNumber]->update_subreddit_settings( message.subreddit.value(), parameter.substr( 0, parameter.size() - 1), value == "true" ? "1" : "0");
                 successes.append("`").append(parameter).append("`,"); // Create & format list of successful boolean parameters
             } else
             {
@@ -641,7 +635,7 @@ void parse_subreddit_settings(const Message &message) {
         else if (INT_SETTINGS.contains(parameter)) {
             messageStream >> value;
             if (is_number(value)) {
-                interface.update_subreddit_settings(message.subreddit.value(), parameter.substr(0,parameter.size()-1), value);
+                interfaces[threadNumber]->update_subreddit_settings( message.subreddit.value(), parameter.substr( 0, parameter.size() - 1), value);
                 successes.append("`").append(parameter).append("`,"); // Create & format list of successful int parameters
             } else {
                 failures.append("`").append(parameter).append("`,");
@@ -652,11 +646,11 @@ void parse_subreddit_settings(const Message &message) {
         response.append(UPDATE_SUCCESS).append(successes.substr(0, successes.size()-1)).append("\n\n");
     if (!failures.empty())
         response.append(UPDATE_FAILURE).append(failures.substr(0, failures.size()-1)).append("\n\n");
-    response.append(get_subreddit_settings_list(message.subreddit.value()));
+    response.append(get_subreddit_settings_list(message.subreddit.value(), threadNumber));
     apiWrapper.submit_comment(response, message.fullname);
 }
 
-void iterate_messages() {
+void iterate_messages(int threadNumber=0) {
     cpr::Response messageQuery = apiWrapper.fetch_messages();
 
     json messageList = json::parse( messageQuery.text )[ "data" ][ "children" ];
@@ -665,7 +659,7 @@ void iterate_messages() {
         apiWrapper.mark_message_as_read(message.fullname);
 
         if (message.isReply) {
-            RowResult settingsQuery = interface.get_subreddit_settings(message.subreddit.value());
+            RowResult settingsQuery = interfaces[threadNumber]->get_subreddit_settings( message.subreddit.value());
             SubredditSetting settings(settingsQuery);
             if (settings.report_replies)
                 apiWrapper.report_submission(message.fullname, FALSE_POSITIVE_MSG);
@@ -685,30 +679,34 @@ void iterate_messages() {
         if (message.subject.starts_with("invitation to moderate")) {
             std::string subreddit = get_last_word(message.subject);
             std::string subredditWithoutR = subreddit.substr(3, subreddit.size()); // Remove the /r/
-            if (!subreddit_exists(subredditWithoutR)) // This methods acts against SQL injection
-                continue;
-            if (!interface.settings_exist(subredditWithoutR))
-                interface.add_settings_row(subredditWithoutR);
-            if (!interface.subreddit_table_exists(subredditWithoutR))
-                interface . create_table_duplicates( subredditWithoutR );
-            if (!interface.subreddit_table_exists(subredditWithoutR + "_saved"))
-                interface . create_table_saved( subredditWithoutR );
+
+            // TODO: ADD BACK
+            //if (!subreddit_exists(subredditWithoutR)) // This methods acts against SQL injection
+            //    continue;
+            if (!interfaces[threadNumber]->settings_exist( subredditWithoutR))
+                interfaces[threadNumber]->add_settings_row( subredditWithoutR);
+            if (!interfaces[threadNumber]->subreddit_table_exists( subredditWithoutR))
+                interfaces[threadNumber]->create_table_duplicates( subredditWithoutR );
+            if (!interfaces[threadNumber]->subreddit_table_exists( subredditWithoutR + "_saved"))
+                interfaces[threadNumber]->create_table_saved( subredditWithoutR );
+
             apiWrapper.accept_invite(subreddit);
-            import_submissions(subredditWithoutR);
+            import_submissions(subredditWithoutR, threadNumber);
             std::string content;
-            content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR));
+            content.append(THANKS_INVITE_1).append(subredditWithoutR).append(THANKS_INVITE_2).append("\n\n").append(get_subreddit_settings_list(subredditWithoutR, threadNumber));
+            apiWrapper.submit_comment(content, message.id);
             continue;
         }
 
         // If the message is a private DM, comes from a subreddit, & is not a mod invite, then it's probably a
         // settings DM. => Try to find & parse settings
-        parse_subreddit_settings(message);
+        parse_subreddit_settings(message, threadNumber);
     }
 }
 
 // Adjust sleep in function of new submissions. Don't waste our API requests when there are few submissions
 unsigned calculate_sleep() {
-    auto substract = (unsigned)(interface.get_new_submissions() * (0.3));
+    auto substract = (unsigned)( interfaces[NUMBER_THREADS]->get_new_submissions() * (0.3));
     if (substract > 30)
         substract = 30;
     unsigned sleep = 30 - substract;
@@ -719,17 +717,19 @@ unsigned calculate_sleep() {
  * Removal 45/45
  * Reports 9/10
  * */
-// TODO : Implement multithreading with sleeps on threads when needed + mutex on DB for each sub locked between a select and an insert
+// TODO : Separate methods between files
 
 int main()
 {
     int count = 0;
     initialize_tesseract();
+    initialize_db_instances();
+    atexit(( destroy_instances ));
 
     while (true) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
-                initialize_token();
+                initialize_token(NUMBER_THREADS);
 
             iterate_messages();
             iterate_submissions();
@@ -737,6 +737,6 @@ int main()
             std::cerr << "EXCEPTION : " << e.what() << std::endl;
         }
         std::cout << count++ << std::endl;
-        sleep(calculate_sleep());
+        sleep(/*calculate_sleep()*/10);
     }
 }

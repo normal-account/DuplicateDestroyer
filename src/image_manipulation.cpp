@@ -103,10 +103,16 @@ void Image::extract_text(int threadNumber)
 
     auto api = tessBaseApi[threadNumber];
     char *outText;
-    Pix *pix = pixRead(IMAGE_NAME);
-    api->SetImage( pix );
-    outText = api->GetUTF8Text();
-    ocrText = outText;
+    try {
+        Pix *pix = pixRead(determine_image_name(threadNumber).c_str());
+        api->SetImage( pix );
+        outText = api->GetUTF8Text();
+        ocrText = outText;
+    }
+    catch (std::exception &e) {
+        std::cerr << "EXCEPTION ON TEXT EXTRACTION : " << e.what() << std::endl;
+        ocrText = "";
+    }
     delete outText;
 }
 
@@ -142,6 +148,10 @@ double get_string_similarity(const std::string &first, const std::string &second
         return ((max_length - getEditDistance(first, second)) / max_length ) * 100;
     }
     return 100.0;
+}
+
+std::string Image::determine_image_name(int threadNumber) {
+    return "image_in_process" + std::to_string(threadNumber);
 }
 
 std::string Image::prepare_word( std::string &word )

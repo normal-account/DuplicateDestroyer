@@ -130,31 +130,28 @@ void ApiWrapper::accept_invite( const std::string &subreddit )
 }
 
 
-void ApiWrapper::download_image( const std::string &url, int threadNumber)
+void ApiWrapper::download_image( const std::string &url, const std::string &imageName )
 {
-
     cpr::Response query = cpr::Get( cpr::Url{url},
                                          cpr::VerifySsl( false ),
                                          cpr::UserAgent( USER_AGENT ));
 
-    HANDLE_STATUS("download");
-    std::ofstream tempFile( IMAGE_NAME + std::to_string(threadNumber) );
+    HANDLE_STATUS("download " + url);
+    std::ofstream tempFile( imageName );
     tempFile << query . text;
 }
 
-// Rev, nec, dd_bot
-cpr::Response ApiWrapper::fetch_token()
+cpr::Response ApiWrapper::fetch_token(int threadNumber)
 {
-    cpr::Response query = cpr::Post( cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                                            cpr::Authentication{/*"6_T2X8heZAm6sRvBLADkwQ"*/"7FqDgsrKsu5IYL5N53ZVZg"
-                                                                /*"ka6iiWVZDZKbAjYWao_0h5lLjWdYNw"*/, "pP2bDfRkr_vGaAhBfYE-CyzuLt2Tlw"},
-                                            cpr::Parameters{{"grant_type", "password"},
-                                                            {"username",   "dd_testing_account"},
-                                                            {"password",   "soleil100"},
-                                                            },
-                                            cpr::VerifySsl( 0 ),
-                                            cpr::UserAgent( USER_AGENT )
-    );
+    auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
+                           cpr::Authentication{"7FqDgsrKsu5IYL5N53ZVZg", "pP2bDfRkr_vGaAhBfYE-CyzuLt2Tlw",cpr::AuthMode::BASIC
+                           },
+                           cpr::Parameters{{"grant_type", "password"},
+                                           {"username",   "dd_testing_account"},
+                                           {"password",   "soleil100"},
+                           },
+                           cpr::VerifySsl( 0 ),
+                           cpr::UserAgent( USER_AGENT ));
     HANDLE_STATUS("fetch_token");
     HANDLE_RATELIMIT;
 
@@ -178,7 +175,7 @@ cpr::Response ApiWrapper::subreddit_exists( const std::string &sub )
 
 void ApiWrapper::set_token( const std::string &newToken )
 {
-    token = newToken ;
+    token = newToken;
 }
 
 void ApiWrapper::set_time_expire( unsigned long long unixTime )

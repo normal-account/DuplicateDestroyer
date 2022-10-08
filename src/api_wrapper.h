@@ -4,16 +4,27 @@
 #include <cpr/cpr.h>
 
 #define USER_AGENT "Linux:DuplicateDestroyer:v2.0 C++ (by /u/PowerModerator)"
-#define IMAGE_NAME "image_in_process"
+//#define IMAGE_NAME "image_in_process"
 
 class ApiWrapper
 {
    int NUMBER_THREADS;
+   std::shared_ptr<cpr::Session> *sessions;
    std::string token;
    unsigned long long timeToExpire = 0;
 
 public:
-   void set_number_threads(int NUMBER_THREADS) { this->NUMBER_THREADS = NUMBER_THREADS; }
+   explicit ApiWrapper(int numberThreads) : NUMBER_THREADS(numberThreads)
+   {
+       sessions = new std::shared_ptr<cpr::Session>[NUMBER_THREADS];
+       for (int i = 0; i < NUMBER_THREADS; i++) {
+           sessions[i] = std::make_shared<cpr::Session>();
+       }
+   }
+
+   ~ApiWrapper() {
+       delete sessions;
+   }
 
    void send_message( const std::string &user, const std::string &content, const std::string &subject );
 
@@ -23,7 +34,7 @@ public:
 
    cpr::Response fetch_top_submissions(const std::string &sub, const std::string &range);
 
-   cpr::Response fetch_token();
+   cpr::Response fetch_token(int threadNumber);
 
    void set_token( const std::string &newToken );
 
@@ -33,11 +44,9 @@ public:
 
    cpr::Response fetch_messages();
 
-   static void download_image( const std::string &url, int threadNumber );
+   static void download_image( const std::string &url, const std::string &imageName );
 
    cpr::Response submit_comment( const std::string &content, const std::string &id );
-
-   //void save_submission( const std::string &id );
 
    void report_submission( const std::string &id, const std::string &reason );
 

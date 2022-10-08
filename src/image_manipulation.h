@@ -6,7 +6,7 @@
 #include <gmpxx.h>
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
-#define IMAGE_NAME "image_in_process"
+//#define IMAGE_NAME "image_in_process"
 
 const int NUMBER_THREADS = 1;
 
@@ -21,6 +21,7 @@ public:
    Mat matrix;
    std::string ocrText;
 
+   static std::string determine_image_name(int threadNumber);
    static int compareHash(const mpz_class &hash1, const mpz_class &hash2);
    int compareHash10x10(const mpz_class& hash);
    int compareHash8x8(const mpz_class& hash);
