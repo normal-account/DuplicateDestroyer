@@ -6,9 +6,10 @@
 #include <gmpxx.h>
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
-//#define IMAGE_NAME "image_in_process"
+#include "string_constants.h"
 
-const int NUMBER_THREADS = 15;
+#ifndef DUPLICATEDESTROYER_IMAGE_MANIPULATION_H
+#define DUPLICATEDESTROYER_IMAGE_MANIPULATION_H
 
 using namespace cv;
 using namespace std;
@@ -38,9 +39,8 @@ public:
 
 
 private:
-
-
-
    mpz_class hash10x10;
    mpz_class hash8x8;
 };
+
+#endif // DUPLICATEDESTROYER_IMAGE_MANIPULATION_H

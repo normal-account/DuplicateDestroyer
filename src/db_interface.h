@@ -1,5 +1,3 @@
-#ifndef DUPLICATEDESTROYER_DB_INTERFACE_H
-#define DUPLICATEDESTROYER_DB_INTERFACE_H
 #include <iostream>
 #include <mysqlx/xdevapi.h>
 #include <memory>
@@ -7,6 +5,9 @@
 #include <gmpxx.h>
 #include <atomic>
 #include <semaphore>
+
+#ifndef DUPLICATEDESTROYER_DB_INTERFACE_H
+#define DUPLICATEDESTROYER_DB_INTERFACE_H
 
 using namespace ::mysqlx;
 class db_interface

@@ -1,3 +1,8 @@
+#ifndef DUPLICATEDESTROYER_STRING_CONSTANTS_H
+#define DUPLICATEDESTROYER_STRING_CONSTANTS_H
+
+const int NUMBER_THREADS = 15;
+
 #define DB_OCRSTRING 0
 #define DB_10PXHASH 1
 #define DB_8PXHASH 2
@@ -102,3 +107,4 @@ const std::set<std::string> INT_SETTINGS = {
         "removal_table_duplicate_number:",
         "ocr_text_threshold:"
 };
+#endif //DUPLICATEDESTROYER_STRING_CONSTANTS_H

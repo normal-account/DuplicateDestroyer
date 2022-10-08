@@ -4,6 +4,9 @@
 #include <optional>
 #include "db_interface.h"
 
+#ifndef DUPLICATEDESTROYER_REDDIT_ENTITIES_H
+#define DUPLICATEDESTROYER_REDDIT_ENTITIES_H
+
 using namespace std;
 
 using namespace ::mysqlx;
@@ -79,5 +82,7 @@ public:
     int ocr_text_threshold;
 
 };
+
+#endif // DUPLICATEDESTROYER_REDDIT_ENTITIES_H
 
 

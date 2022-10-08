@@ -1,8 +1,7 @@
-//
-// Created by carle on 3/13/22.
-//
 #include <cpr/cpr.h>
 
+#ifndef DUPLICATEDESTROYER_API_WRAPPER_H
+#define DUPLICATEDESTROYER_API_WRAPPER_H
 #define USER_AGENT "Linux:DuplicateDestroyer:v2.0 C++ (by /u/PowerModerator)"
 //#define IMAGE_NAME "image_in_process"
 
@@ -58,3 +57,5 @@ public:
 
    cpr::Response subreddit_exists(const std::string &sub);
 };
+
+#endif // DUPLICATEDESTROYER_API_WRAPPER_H
