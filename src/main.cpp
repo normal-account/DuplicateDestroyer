@@ -1,10 +1,5 @@
-#include "api_wrapper.h"
-#include "image_manipulation.h"
-#include "reddit_entities.h"
 #include <chrono>
 #include <cstdio>
-#include "utils.h"
-#include "comment_formatting.h"
 #include "submission_processing.h"
 #include "message_processing.h"
 
@@ -23,9 +18,9 @@ unsigned long long get_unix_time() {
 }
 
 // Should be done only once the original token expires.
-void initialize_token(int threadNumber)
+void initialize_token()
 {
-    cpr::Response tokenQuery = apiWrapper.fetch_token(threadNumber);
+    cpr::Response tokenQuery = apiWrapper.fetch_token();
     json jsonToken = json::parse( tokenQuery . text );
     std::string ogToken = "bearer ";
     ogToken . append( jsonToken[ "access_token" ] );
@@ -70,7 +65,7 @@ void initialize_db_instances() {
     }
 }
 
-// Adjust sleep in function of new submissions. Don't want to waste our API requests when there are few submissions
+// Adjust sleep in function of new submissions. Don't want to waste our API requests when there are few submissions.
 unsigned calculate_sleep() {
     auto substract = (unsigned)( interfaces[NUMBER_THREADS]->get_new_submissions() * (0.3));
     if (substract > 30)
@@ -79,12 +74,6 @@ unsigned calculate_sleep() {
     return sleep;
 }
 
-/*
- * Removal 45/45
- * Reports 9/10
- * */
-// TODO : Separate methods between files
-// TODO : Check ratelimiting
 int main()
 {
     assert(NUMBER_THREADS >= 1);
@@ -96,7 +85,7 @@ int main()
     while (true) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
-                initialize_token(NUMBER_THREADS);
+                initialize_token();
 
             iterate_messages();
             iterate_submissions();

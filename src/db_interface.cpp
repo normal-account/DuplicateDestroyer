@@ -49,10 +49,7 @@ void db_interface::insert_submission( const std::string &subreddit, const std::s
 {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    if (ocrtext.size() > 300)
-        table.insert().values(ocrtext.substr(0, 300), tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
-    else
-        table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
+    table.insert().values(ocrtext, tenpx, eightpx, id, author, dimensions, date, isVideo, title, url).execute();
 }
 
 bool db_interface::settings_exist(const std::string &sub)

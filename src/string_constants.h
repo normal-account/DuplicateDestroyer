@@ -33,7 +33,7 @@ const int NUMBER_THREADS = 15;
 
 const std::string HEADER_REMOVE_IMAGE = "**Your submission has been removed because it has been posted on the subreddit recently.**\n\n";
 
-const std::string HEADER_REMOVE_LINK = "**Your submission has been removed because at least 1 submission with the same URL has posted on the subreddit recently.**";
+const std::string HEADER_REMOVE_LINK = "**Your submission has been removed because at least 1 submission with the same URL has posted on the subreddit recently.**\n\n";
 
 const std::string HEADER_REMOVE_TITLE = "**Your submission has been removed because at least 1 submission with the same title has posted on the subreddit recently.**\n\n";
 

@@ -142,7 +142,7 @@ void ApiWrapper::download_image( const std::string &url, const std::string &imag
     tempFile << query . text;
 }
 
-cpr::Response ApiWrapper::fetch_token(int threadNumber)
+cpr::Response ApiWrapper::fetch_token() const
 {
     auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
                            cpr::Authentication{"7FqDgsrKsu5IYL5N53ZVZg", "pP2bDfRkr_vGaAhBfYE-CyzuLt2Tlw",cpr::AuthMode::BASIC

@@ -33,7 +33,7 @@ public:
 
    cpr::Response fetch_top_submissions(const std::string &sub, const std::string &range);
 
-   cpr::Response fetch_token(int threadNumber);
+   cpr::Response fetch_token() const;
 
    void set_token( const std::string &newToken );
 

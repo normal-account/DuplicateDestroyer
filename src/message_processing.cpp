@@ -36,7 +36,7 @@ std::string get_subreddit_settings_list(const std::string &sub, int threadNumber
     return formattedSettings;
 }
 
-// Warning : reddit's API was mistakenly returning false for a small test subreddit, even though it existed...
+// Warning : reddit's API may return false for very small subreddits (even though they exist)
 bool subreddit_exists(const std::string &sub) {
     if (sub.size() > 50 || sub.size() < 2)
         return false;
@@ -118,8 +118,10 @@ void iterate_messages(int threadNumber) {
                 continue;
             if (!interfaces[threadNumber]->settings_exist( subredditWithoutR))
                 interfaces[threadNumber]->add_settings_row( subredditWithoutR);
+
             if (!interfaces[threadNumber]->subreddit_table_exists( subredditWithoutR))
                 interfaces[threadNumber]->create_table_duplicates( subredditWithoutR );
+
             if (!interfaces[threadNumber]->subreddit_table_exists( subredditWithoutR + "_saved"))
                 interfaces[threadNumber]->create_table_saved( subredditWithoutR );
 

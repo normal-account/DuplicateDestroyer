@@ -102,18 +102,17 @@ void Image::extract_text(int threadNumber)
 {
 
     auto api = tessBaseApi[threadNumber];
-    char *outText;
     try {
         Pix *pix = pixRead(determine_image_name(threadNumber).c_str());
         api->SetImage( pix );
-        outText = api->GetUTF8Text();
-        ocrText = outText;
+        ocrText = api->GetUTF8Text();
+        if (ocrText.size() > 300)
+            ocrText = ocrText.substr(0, 300);
     }
     catch (std::exception &e) {
         std::cerr << "EXCEPTION ON TEXT EXTRACTION : " << e.what() << std::endl;
         ocrText = "";
     }
-    delete outText;
 }
 
 // To consider a modified version of the Levenshtein algorithm that takes string length in consideration
