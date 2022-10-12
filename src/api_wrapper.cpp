@@ -142,6 +142,15 @@ void ApiWrapper::download_image( const std::string &url, const std::string &imag
     tempFile << query . text;
 }
 
+bool ApiWrapper::image_deleted( const std::string &url )
+{
+    cpr::Response query = cpr::Get( cpr::Url{url},
+                                    cpr::VerifySsl( false ),
+                                    cpr::UserAgent( USER_AGENT ));
+
+    return query.status_code == 404;
+}
+
 cpr::Response ApiWrapper::fetch_token() const
 {
     auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},

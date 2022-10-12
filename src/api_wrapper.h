@@ -45,6 +45,8 @@ public:
 
    static void download_image( const std::string &url, const std::string &imageName );
 
+   static bool image_deleted( const std::string &url );
+
    cpr::Response submit_comment( const std::string &content, const std::string &id );
 
    void report_submission( const std::string &id, const std::string &reason );

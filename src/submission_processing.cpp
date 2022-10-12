@@ -81,6 +81,8 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
 
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
             //std::cout << " (REMOVED)";
+            if (ApiWrapper::image_deleted((*row).get(DB_URL).get<std::string>()))
+                continue;
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, *row, submission . created , tableStrSimilarity));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
@@ -90,6 +92,8 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
 
             if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
                 //std::cout << " (REPORTED)";
+                if (ApiWrapper::image_deleted((*row).get(DB_URL).get<std::string>()))
+                    continue;
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, *row, submission . created, tableStrSimilarity));
             }
