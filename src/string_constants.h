@@ -46,7 +46,7 @@ const std::string FOOTER_REMOVE = "\n\nI am a bot. If you believe this was sent 
                                           "            \"DuplicateDestroyer.%20Here%20is%20a%20link%20to%20my%20post:%20\" + submission.shortlink + \").\"\n"
                                           "            \" **Do not delete your post or moderators won't be able to review it.**"*/
 
-const std::string MARKDOWN_TABLE_IMAGE = "N | User | Date | Posted... | Similarity | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
+const std::string MARKDOWN_TABLE_IMAGE = "N | User | Date | Posted... | Image Similarity | Text Similarity | Dimensions | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
 
 const std::string MARKDOWN_TABLE_LINK = "N | User | Date | Posted... | URL | Title\n:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:\n";
 

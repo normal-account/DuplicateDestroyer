@@ -71,6 +71,7 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         std::string ocrSTR = (*row).get(DB_OCRSTRING).get<std::string>();
 
         int strSimilarity = (int)get_string_similarity(ocrSTR, imageOcrString);
+        int tableStrSimilarity = imageOcrString.size() > 5 ? strSimilarity : -1; // for the create_image_markdown_row function
 
         std::string strhash = (*row).get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
         mpzhash.set_str(strhash, 10);
@@ -81,7 +82,7 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
             //std::cout << " (REMOVED)";
             numberDuplicates++;
-            removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, *row, submission . created ));
+            removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, *row, submission . created , tableStrSimilarity));
         } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
             strhash = (*row).get(DB_8PXHASH).get<std::string>();
             mpzhash.set_str(strhash, 10);
@@ -90,7 +91,7 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
             if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
                 //std::cout << " (REPORTED)";
                 numberDuplicates++;
-                reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, *row, submission . created ));
+                reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, *row, submission . created, tableStrSimilarity));
             }
         }
         //std::cout << std::endl;

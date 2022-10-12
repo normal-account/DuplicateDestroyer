@@ -20,7 +20,7 @@ std::string create_image_markdown_header( const std::string &author, const std::
 
 std::string create_markdown_header( const std::string &author, const std::string &date, const std::string &MARKDOWN_HEADER);
 
-std::string create_image_markdown_row( int number, int similarity, Row row, long long submissionTime);
+std::string create_image_markdown_row( int number, int similarity, Row row, long long submissionTime, int textSimilarity);
 
 std::string create_link_markdown_row( int number, Row &row, long long submissionTime);
 

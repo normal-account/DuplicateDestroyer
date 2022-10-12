@@ -49,7 +49,7 @@ std::string create_markdown_header( const std::string &author, const std::string
     return "**OP:** " + author + "\n\n**Date:** " + date + "\n\n**Duplicates:**\n\n" + MARKDOWN_HEADER;
 }
 
-std::string create_image_markdown_row( int number, int similarity, Row row, long long submissionTime) {
+std::string create_image_markdown_row( int number, int similarity, Row row, long long submissionTime, int textSimilarity) {
     auto id = row.get(DB_ID).get<std::string>();
     auto author = row.get(DB_AUTHOR).get<std::string>();
     auto dimensions = row.get(DB_DIMENSIONS).get<std::string>();
@@ -60,8 +60,9 @@ std::string create_image_markdown_row( int number, int similarity, Row row, long
     auto url = row.get(DB_URL).get<std::string>();
     return std::to_string(number) + " | " + "[/u/" + author + "](https://www.reddit.com/user/" + author + ") | " + unix_time_to_string(unixDate)
            + " | " + get_time_interval(unixDate, submissionTime) + " | " + "[" + std::to_string(similarity) + "%](" + url + ") | "
-           + dimensions + " | [" + title + "](https://redd.it/" + id + ")\n";
+           + (textSimilarity == -1 ?  "N/A" : (std::to_string(textSimilarity) + "%") ) + " | " + dimensions + " | [" + title + "](https://redd.it/" + id + ")\n";
 }
+
 
 std::string create_link_markdown_row( int number, Row &row, long long submissionTime) {
     auto author = row.get(DB_AUTHOR).get<std::string>();
