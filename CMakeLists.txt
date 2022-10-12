@@ -1,7 +1,7 @@
 include(FetchContent)
 link_directories(/usr/local/mysql/connector-c++-8.0.28/lib64/debug) # necessary for mysql connector lib linking
 FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
-        GIT_TAG beb9e98806bb84bcc130a2cebfbcbbc6ce62b335) # The commit hash for 1.7.2. Replace with the latest from: https://github.com/libcpr/cpr/releases
+        GIT_TAG f88fd7737de3e640c61703eb57a0fa0ce00c60cd) # The commit hash for 1.9.2. Replace with the latest from: https://github.com/libcpr/cpr/releases
 FetchContent_MakeAvailable(cpr)
 
 cmake_minimum_required(VERSION 3.17)
@@ -12,24 +12,25 @@ find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
 
-add_executable(DuplicateDestroyer src/main.cpp src/api_wrapper.cpp src/reddit_entities.cpp src/image_manipulation.cpp)
+add_executable(DuplicateDestroyer src/db_interface.cpp src/main.cpp src/api_wrapper.cpp src/reddit_entities.cpp
+        src/image_manipulation.cpp src/comment_formatting.cpp src/submission_processing.cpp src/message_processing.cpp)
 
 SET(OpenCV_LIBS opencv_core opencv_highgui opencv_imgproc) # linker errors without this line
 
+### Change according to your config
 find_library(mysqlcppconn_LIB
         mysqlcppconn8
         HINTS /usr/local/mysql/connector-c++-8.0.28/lib64/debug)
-#/usr/local/mysql/connector-c++-8.0.28/lib64/debug
 
-target_link_libraries(DuplicateDestroyer cpr::cpr ${OpenCV_LIBS} gmpxx gmp ${mysqlcppconn_LIB})
+target_link_libraries(DuplicateDestroyer cpr::cpr ${OpenCV_LIBS} gmpxx gmp ${mysqlcppconn_LIB} tesseract leptonica)
 
 
 ### Libs
 # OpenCv (Package manager)
-# GMP (package manager
+# GMP (package manager on Arch, build from source on Debian-based + libgmp-dev)
 # JSON lib (just copy the folder)
-# mysql connector 8.0 (Build from source : https://dev.mysql.com/doc/connector-cpp/8.0/en/connector-cpp-installation-source-cpp.html
-
-# Boost installation path : /usr/include/boost
-#
+# mysql connector 8.0 (Build from source : https://dev.mysql.com/doc/connector-cpp/8.0/en/connector-cpp-installation-source-cpp.html)
+# Boost (Package manager, installation path : /usr/include/boost)
+# Tesseract (Package manager)
