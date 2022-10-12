@@ -2,9 +2,13 @@
 #include "submission_processing.h"
 
 bool is_number(const std::string& s) {
+    int count = 0;
     std::string::const_iterator it = s.begin();
-    while (it != s.end() && std::isdigit(*it)) ++it;
-    return !s.empty() && it == s.end();
+    while (it != s.end() && std::isdigit(*it)) {
+        count++; // counting the amount of digits ; we don't want a number above 999 999 999
+        ++it;
+    }
+    return !s.empty() && it == s.end() && count <= 9;
 }
 
 std::string get_last_word(std::string &s) {
