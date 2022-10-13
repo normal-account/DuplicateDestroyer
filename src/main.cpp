@@ -4,7 +4,7 @@
 #include "message_processing.h"
 
 std::vector<std::thread*> benchmarkThreads;
-std::binary_semaphore setSemaphore{1};
+std::mutex setMutex;
 ApiWrapper apiWrapper(NUMBER_THREADS);
 db_interface *interfaces[NUMBER_THREADS + 1];
 tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];

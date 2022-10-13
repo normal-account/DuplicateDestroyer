@@ -11,7 +11,7 @@
 #define DUPLICATEDESTROYER_SUBMISSION_PROCESSING_H
 
 extern std::vector<std::thread*> benchmarkThreads;
-extern std::binary_semaphore setSemaphore;
+extern std::mutex setMutex;
 extern ApiWrapper apiWrapper;
 extern db_interface *interfaces[NUMBER_THREADS + 1];
 extern tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];

@@ -289,10 +289,10 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
         std::cerr << "EXCEPTION ON THREAD-SHARING:" << e.what() << std::endl;
     }
     // Remove blockers
-    setSemaphore.acquire();
+    setMutex.lock();
     sub2thread->erase(submission.subreddit);
     requiredOrder->insert(submission.subreddit); // sure, we've freed the sub, but not until the loop has started over
-    setSemaphore.release();
+    setMutex.unlock();
 
     std::cout << "Finished" << std::endl;
     *finished = true;
@@ -301,13 +301,13 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
 // Choosing the next thread in which to process a submission of the subreddit corresponding to 'sub'
 [[nodiscard]] int choose_thread(const std::string &sub, const bool finished[NUMBER_THREADS], std::set<std::string> &sub2thread, std::set<std::string> &requiredOrder) {
     // If a thread with the same sub is already running, then wait. If a sub has finished in the current iteration, then wait as well.
-    setSemaphore.acquire();
+    setMutex.lock();
     if (sub2thread.contains(sub) || requiredOrder.contains(sub))
     {
-        setSemaphore.release();
+        setMutex.unlock();
         return -1;
     }
-    setSemaphore.release();
+    setMutex.unlock();
 
     while (true) {
         // Loop until a thread has finished
@@ -369,9 +369,9 @@ void iterate_submissions() {
 
     while (!submissionList.empty()) {
 
-        setSemaphore.acquire();
+        setMutex.lock();
         requiredOrder.clear();
-        setSemaphore.release();
+        setMutex.unlock();
 
         for (auto it = submissionList.begin(); it != submissionList.end(); )
         {
@@ -391,9 +391,9 @@ void iterate_submissions() {
                 finished[thread] = false;
 
                 // Threads can interact with the set too, hence the need for a semaphore
-                setSemaphore.acquire();
+                setMutex.lock();
                 sub2thread.insert(submission.subreddit); // the subreddit is busy
-                setSemaphore.release();
+                setMutex.unlock();
 
                 // Calling join() on a never-initialized thread will cause exceptions, hence this IF
                 if (!alreadyCalled[thread])
