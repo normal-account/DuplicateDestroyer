@@ -2,9 +2,6 @@
 
 extern tesseract::TessBaseAPI* tessBaseApi[NUMBER_THREADS];
 
-// There is some precision loss with the GMP library. Getting a max of +- 200 difference on the final hash on each
-// execution. This is caused by the nature of GMP, which stores big integers like floats. It should not be an issue
-// considering the absurd high value of the final hash.
 void Image::computeHash10x10()
 {
     Mat matrix10px;
@@ -32,7 +29,6 @@ void Image::computeHash10x10()
         {
             differenceHash <<= 1;
             pixel = matrix10px . at<uchar>( row, col );
-            //std::cout << "Pixel (" << row << ", " << col << ") => " << (int)pixel << " with diff hash => " << differenceHash << std::endl;
             differenceHash |= 1 * ( pixel >= previousPixel );
 
             previousPixel = pixel;
