@@ -4,7 +4,6 @@
 #include <utility>
 #include <gmpxx.h>
 #include <atomic>
-#include <semaphore>
 
 #ifndef DUPLICATEDESTROYER_DB_INTERFACE_H
 #define DUPLICATEDESTROYER_DB_INTERFACE_H
