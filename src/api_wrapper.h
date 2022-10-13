@@ -1,4 +1,5 @@
 #include <cpr/cpr.h>
+#include <unistd.h>
 
 #ifndef DUPLICATEDESTROYER_API_WRAPPER_H
 #define DUPLICATEDESTROYER_API_WRAPPER_H

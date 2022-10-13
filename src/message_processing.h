@@ -1,4 +1,5 @@
 #include <iostream>
+#include "submission_processing.h"
 #include "reddit_entities.h"
 #include "db_interface.h"
 #include "string_constants.h"

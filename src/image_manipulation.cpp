@@ -88,7 +88,7 @@ int Image::compareHash8x8( const mpz_class &hash) {
 int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
 {
     mpz_class xorHash = hash1 ^ hash2;
-    string binaryHash = xorHash.get_str(2);
+    std::string binaryHash = xorHash.get_str(2);
     int count = 0;
     for (char i : binaryHash) {
         if (i == '1')

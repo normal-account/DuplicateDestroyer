@@ -12,7 +12,6 @@
 #define DUPLICATEDESTROYER_IMAGE_MANIPULATION_H
 
 using namespace cv;
-using namespace std;
 
 double get_string_similarity(const std::string &first, const std::string &second);
 int getEditDistance(const std::string &first, const std::string& second);
