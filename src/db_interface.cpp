@@ -129,10 +129,11 @@ mysqlx::RowResult db_interface::get_subreddit_settings(const std::string &name) 
 
     std::string where = "subreddit = '" + name + "'";
     auto row = table.select("*").where(where).execute();
-    bool empty = row.count() == 0;
 
-    if (empty)
-        throw std::runtime_error("Empty subreddit settings on " + name);
+    if (row.count() == 0) {
+        add_settings_row(name);
+        row = table.select("*").where(where).execute();
+    }
     return row;
 }
 
