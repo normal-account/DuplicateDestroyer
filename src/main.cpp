@@ -21,6 +21,7 @@ unsigned long long get_unix_time() {
 // Should be done only once the original token expires.
 void initialize_token()
 {
+    //std::cout << apiWrapper.image_deleted("https://i.redd.it/hdosxpjm4iz91.png") << std::endl;
     cpr::Response tokenQuery = apiWrapper.fetch_token();
     json jsonToken = json::parse( tokenQuery . text );
     std::string ogToken = "bearer ";
@@ -91,6 +92,12 @@ int main()
             iterate_messages();
             iterate_submissions();
         } catch (std::exception &e) {
+            for (int i = 0; i < NUMBER_THREADS; i++) {
+                if (benchmarkThreads[i] != nullptr && benchmarkThreads[i]->joinable()) {
+                    benchmarkThreads[i]->join();
+                    std::cout << "Joined on exception" << i << std::endl; // TODO: REMOVE
+                }
+            }
             std::cerr << "EXCEPTION : " << e.what() << std::endl;
         }
         std::cout << count++ << std::endl;
