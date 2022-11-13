@@ -27,7 +27,7 @@ Submission::Submission( json data )
             std::string fileType = urlIter.value()["m"]; // e.g. for a JPG, "m" gives "image/jpg"
             fileType = fileType.substr(6, fileType.size() - 6); // Extracting only the datatype (excluding 'image/')
             std::string constructedURL;
-            constructedURL.append("i.redd.it/").append( submissionID).append( ".").append( fileType );
+            constructedURL.append("https://i.redd.it/").append( submissionID).append( ".").append( fileType );
             galleryUrls.push_back(constructedURL);
         }
     } else

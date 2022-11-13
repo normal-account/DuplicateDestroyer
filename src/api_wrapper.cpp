@@ -126,6 +126,7 @@ void ApiWrapper::download_image( const std::string &url, const std::string &imag
                                          cpr::VerifySsl( false ),
                                          cpr::UserAgent( USER_AGENT ));
 
+
     HANDLE_STATUS("download " + url);
     std::ofstream tempFile( imageName );
     tempFile << query . text;
@@ -157,9 +158,6 @@ cpr::Response ApiWrapper::fetch_token() const
 
     return query;
 }
-
-
-
 
 
 

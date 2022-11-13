@@ -69,7 +69,7 @@ const std::string MODMAIL_FOOTER_3 = "). **Do not delete your post or moderators
 const char *const SETTINGS_STRING = "Current subreddit settings :\n\n    enabled : %s\n    remove_threshold: %s\n    report_threshold: %s\n    enforce_videos: %s\n"
                                     "    enforce_images: %s\n    enforce_links: %s\n    time_range: %s\n    report_links: %s\n    report_replies: %s\n"
                                     "    enforce_titles: %s\n    title_remove_threshold: %s\n    title_report_threshold: %s\n    min_title_length_to_enforce: %s\n"
-                                    "    removal_table_duplicate_number: %s\n    ocr_text_threshold: %s";
+                                    "    remove_table_duplicate_int: %s\n    ocr_text_threshold: %s";
 
 const std::string THANKS_INVITE_1 = "Thank you for inviting me on /r/";
 // Subreddit name between these 2
@@ -104,7 +104,7 @@ const std::set<std::string> INT_SETTINGS = {
         "title_report_threshold:",
         "min_title_length_to_enforce:",
         "time_range:",
-        "removal_table_duplicate_number:",
+        "remove_table_duplicate_int:",
         "ocr_text_threshold:"
 };
 #endif //DUPLICATEDESTROYER_STRING_CONSTANTS_H

@@ -94,6 +94,7 @@ void iterate_messages(int threadNumber) {
     for ( auto messageIter = messageList.begin(); messageIter != messageList.end(); messageIter++) {
         Message message(messageIter.value());
         apiWrapper.mark_message_as_read(message.fullname);
+        std::cout << message.subject << " with " << message.id << std::endl;
 
         // TODO : Uncomment this once inbox is empty
         /*if (message.isReply) {

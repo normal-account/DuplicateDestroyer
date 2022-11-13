@@ -96,6 +96,8 @@ int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
 
 void Image::extract_text(int threadNumber)
 {
+    // TODO : Blacklist completely white or black images.
+    // TODO : Occasional infinite loops on GetUTF8.
 
     auto api = tessBaseApi[threadNumber];
     try {
@@ -181,4 +183,28 @@ std::string Image::filter_non_words( const std::set<std::string> &dict ) const
 
 cv::Size Image::get_dimensions() const {
     return matrix.size();
+}
+
+bool Image::isValidImage( const std::string &imageName )
+{
+    std::ifstream file(imageName);
+    std::string temp;
+    temp.resize(6);
+    char* begin = &*temp.begin();
+    file.read(begin, 5);
+    auto* h = reinterpret_cast<unsigned char *>(begin);
+
+    //GIF8
+    if (h[0] == 71 && h[1] == 73 && h[2] == 70 && h[3] == 56)
+        return true;
+
+    //89 PNG
+    if (h[0] == 137 && h[1] == 80 && h[2] == 78 && h[3] == 71)
+        return true;
+
+    //FFD8 PNG
+    if (h[0] == 255 && h[1] == 216)
+        return true;
+
+    return false;
 }

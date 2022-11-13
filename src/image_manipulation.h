@@ -7,6 +7,7 @@
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
 #include "string_constants.h"
+#include <fstream>
 
 #ifndef DUPLICATEDESTROYER_IMAGE_MANIPULATION_H
 #define DUPLICATEDESTROYER_IMAGE_MANIPULATION_H
@@ -35,6 +36,7 @@ public:
    [[nodiscard]] std::string get_text() const { return ocrText; }
    [[nodiscard]] std::string filter_non_words(const std::set<std::string> &dict) const;
    [[nodiscard]] cv::Size get_dimensions() const;
+   [[nodiscard]] static bool isValidImage( const std::string &imageName );
 
 
 private:

@@ -77,10 +77,8 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
-        //std::cout << submission.title << " vs " << row.get(DB_TITLE).get<std::string>() << " text (" << strSimilarity << " @ " << imageOcrString.size() << "&" << ocrSTR.size() << " ) (" << (similarity) << ")";
 
         if (determine_remove(similarity, settings.remove_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
-            //std::cout << " (REMOVED)";
             if (ApiWrapper::image_deleted((*row).get(DB_URL).get<std::string>()))
                 continue;
             numberDuplicates++;
@@ -91,14 +89,12 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
             similarity = image.compareHash8x8( mpzhash );
 
             if (determine_report(similarity, settings.report_threshold, strSimilarity, imageOcrString.size(), ocrSTR.size())) {
-                //std::cout << " (REPORTED)";
                 if (ApiWrapper::image_deleted((*row).get(DB_URL).get<std::string>()))
                     continue;
                 numberDuplicates++;
                 reportComment.push_back(create_image_markdown_row( numberDuplicates, similarity, *row, submission . created, tableStrSimilarity));
             }
         }
-        //std::cout << std::endl;
     }
 
     if (numberDuplicates > 0) {
@@ -109,7 +105,13 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
 }
 
 void process_image(Image &image, const std::string &url, int threadNumber) {
-    ApiWrapper::download_image(url, Image::determine_image_name(threadNumber));
+    std::string imageName = Image::determine_image_name(threadNumber);
+    ApiWrapper::download_image(url, imageName);
+
+    if (!Image::isValidImage(imageName)) {
+        throw std::runtime_error("Invalid image format on " + url);
+    }
+
     image.matrix = imread(Image::determine_image_name(threadNumber));
     image . extract_text(threadNumber);
 
@@ -287,6 +289,7 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
             insert_submission(submission, image, isMedia, threadNumber);
 
     } catch (std::exception &e) {
+        std::cout << "Thread " << threadNumber << " for '" << submission.title << "' and sub " << submission.subreddit << std::endl;
         std::cerr << "EXCEPTION ON THREAD NUMBER " << threadNumber << ":" << e.what() << std::endl;
     }
 
