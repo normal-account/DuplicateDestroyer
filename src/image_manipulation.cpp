@@ -96,9 +96,7 @@ int Image::compareHash( const mpz_class &hash1, const mpz_class &hash2)
 
 void Image::extract_text(int threadNumber)
 {
-    // TODO : Blacklist completely white or black images.
-    // TODO : Occasional infinite loops on GetUTF8.
-
+    // TODO : Bug in Tess that causes rare infinite loops on GetUTF8. Either add a timeout or figure out a better fix...
     auto api = tessBaseApi[threadNumber];
     try {
         Pix *pix = pixRead(determine_image_name(threadNumber).c_str());

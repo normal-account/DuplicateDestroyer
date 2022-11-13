@@ -9,7 +9,7 @@ std::shared_ptr<std::vector<mpz_class>> db_interface::get_hashes(const std::stri
     auto hashes = std::make_shared<std::vector<mpz_class>>();
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable(subreddit);
-    auto query = table.select("*").where("8pxhash != '' and 10pxhash != '' and ocrstring != ''");
+    auto query = table.select("*").where("'8pxhash' != ''");
 
     auto result = query.execute().begin().operator*().get(0);
     for (const auto& it : result) {

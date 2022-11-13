@@ -160,7 +160,6 @@ cpr::Response ApiWrapper::fetch_token() const
 }
 
 
-
 cpr::Response ApiWrapper::subreddit_exists( const std::string &sub )
 {
     auto query = cpr::Post( cpr::Url{"https://oauth.reddit.com/api/search_subreddits"},
