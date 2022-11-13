@@ -91,13 +91,15 @@ int main()
 
             iterate_messages();
             iterate_submissions();
-        } catch (std::exception &e) {
-            for (int i = 0; i < NUMBER_THREADS; i++) {
+        } catch (std::exception &e) { // Something went horribly wrong !
+            // Make sure that all threads are joined correctly
+            for (int i = 0; i < benchmarkThreads.size(); i++) {
                 if (benchmarkThreads[i] != nullptr && benchmarkThreads[i]->joinable()) {
                     benchmarkThreads[i]->join();
                     std::cout << "Joined on exception" << i << std::endl; // TODO: REMOVE
                 }
             }
+            setMutex.unlock(); // Unlock a possibly locked mutex to prevent infinite loops
             std::cerr << "EXCEPTION : " << e.what() << std::endl;
         }
         std::cout << count++ << std::endl;

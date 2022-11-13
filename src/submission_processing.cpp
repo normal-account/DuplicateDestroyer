@@ -254,10 +254,11 @@ void insert_submission(const Submission &submission, Image &image, bool isMedia,
 }
 
 void process_submission(bool *finished, std::set<std::string> *sub2thread, std::set<std::string> *requiredOrder, const Submission &submission, const SubredditSetting &settings, int threadNumber) {
+    //sleep(10);
     try {
         interfaces[threadNumber]->save_submission( submission . subreddit, submission . id );
 
-        std::cout << "Thread " << threadNumber << " for '" << submission.title << "'" << std::endl;
+        std::cout << "Thread " << threadNumber << " for '" << submission.title << "' and sub " << submission.subreddit << std::endl;
         bool submissionRemoved = false;
 
         bool isMedia = ( submission . type == IMAGE && settings . enforce_images ) ||
@@ -286,8 +287,9 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
             insert_submission(submission, image, isMedia, threadNumber);
 
     } catch (std::exception &e) {
-        std::cerr << "EXCEPTION ON THREAD-SHARING:" << e.what() << std::endl;
+        std::cerr << "EXCEPTION ON THREAD NUMBER " << threadNumber << ":" << e.what() << std::endl;
     }
+
     // Remove blockers
     setMutex.lock();
     sub2thread->erase(submission.subreddit);
@@ -378,7 +380,15 @@ void iterate_submissions() {
             auto &submission = *it;
 
             RowResult settingsQuery = interfaces[NUMBER_THREADS]->get_subreddit_settings( submission . subreddit );
-            SubredditSetting settings( settingsQuery );
+            SubredditSetting settings{}; // Temporarily initializing it here so the compiler doesn't freak out
+            try {
+                settings = SubredditSetting( settingsQuery );
+            } catch( std::runtime_error &e) { // Exception is thrown when a setting is somehow of invalid format
+                std::cerr << "Invalid setting format on " << submission.subreddit << std::endl;
+                interfaces[NUMBER_THREADS]->add_settings_row(submission.subreddit);
+                continue;
+            }
+
             if ( !settings . enabled )
             {
                 next_iteration(it, submissionList);
@@ -389,6 +399,7 @@ void iterate_submissions() {
             if (thread != -1) {
                 // Starting a new thread, mark it as not finished & limit subreddit to avoid race-conditions
                 finished[thread] = false;
+
 
                 // Threads can interact with the set too, hence the need for a semaphore
                 setMutex.lock();
@@ -405,7 +416,7 @@ void iterate_submissions() {
                 }
                 benchmarkThreads[thread] = new std::thread(process_submission, finished + thread, &sub2thread, &requiredOrder, submission, settings, thread);
                 //sleep(15);
-                next_iteration(it, submissionList);
+                next_iteration(it, submissionList); // Remove the submission from the list and increment it
             }
             else
                 it++;

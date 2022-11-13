@@ -148,6 +148,7 @@ void db_interface::add_settings_row( const std::string &sub )
 {
     auto db = session.getSchema("all_reposts");
     auto table = db.getTable("SubredditSettings");
+    table.remove().where("subreddit = '" + sub + "'").execute(); // Removing line if it somehow already exists
     // TODO : Revisit default values
     table.insert().values(sub, 1, 0, 95, 89, 1, 1, 1, 90, 0, 1, 0, 85, 95, 10, 5, 80).execute();
 }

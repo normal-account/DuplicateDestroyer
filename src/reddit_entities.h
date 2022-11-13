@@ -63,6 +63,7 @@ class SubredditSetting
 {
 public:
     explicit SubredditSetting(RowResult &settings);
+    explicit SubredditSetting() = default;
 
     bool enabled;
     bool imported;

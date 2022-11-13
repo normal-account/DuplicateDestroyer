@@ -95,7 +95,8 @@ void iterate_messages(int threadNumber) {
         Message message(messageIter.value());
         apiWrapper.mark_message_as_read(message.fullname);
 
-        if (message.isReply) {
+        // TODO : Uncomment this once inbox is empty
+        /*if (message.isReply) {
             RowResult settingsQuery = interfaces[threadNumber]->get_subreddit_settings( message.subreddit.value());
             SubredditSetting settings(settingsQuery);
             if (settings.report_replies)
@@ -111,7 +112,7 @@ void iterate_messages(int threadNumber) {
         if (!message.subreddit.has_value()) {
             apiWrapper.submit_comment(ERROR_NOT_FROM_SUB, message.fullname);
             continue;
-        }
+        }*/
 
         if (message.subject.starts_with("invitation to moderate")) {
             std::string subreddit = get_last_word(message.subject);

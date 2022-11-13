@@ -77,7 +77,7 @@ cpr::Response ApiWrapper::fetch_messages()
 {
     auto query = cpr::Get( cpr::Url{"https://oauth.reddit.com/message/unread"},
                      cpr::Parameters{{"mark",  "true"},
-                                     {"limit", "1"}},
+                                     {"limit", "10"}},
     HEADERS;
     HANDLE_STATUS("fetch_msg");
     return query;
@@ -140,6 +140,7 @@ bool ApiWrapper::image_deleted( const std::string &url )
     return query.status_code == 404;
 }
 
+
 cpr::Response ApiWrapper::fetch_token() const
 {
     auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
@@ -156,6 +157,8 @@ cpr::Response ApiWrapper::fetch_token() const
 
     return query;
 }
+
+
 
 
 
