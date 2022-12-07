@@ -23,7 +23,6 @@ public:
    }
 
    ~ApiWrapper() {
-       delete sessions;
    }
 
    void send_message( const std::string &user, const std::string &content, const std::string &subject );

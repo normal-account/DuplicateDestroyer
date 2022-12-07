@@ -73,7 +73,7 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         int strSimilarity = (int)get_string_similarity(ocrSTR, imageOcrString);
         int tableStrSimilarity = imageOcrString.size() > 5 ? strSimilarity : -1; // for the create_image_markdown_row function
 
-        std::string strhash = (*row).get(DB_10PXHASH).get<std::string>(); // get 10px hash or 8px one
+        std::string strhash = (*row).get(DB_10PXHASH).get<std::string>(); // get 10px hash
         mpzhash.set_str(strhash, 10);
         int similarity = image.compareHash10x10( mpzhash );
 
@@ -83,7 +83,7 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
                 continue;
             numberDuplicates++;
             removeComment.push_back( create_image_markdown_row( numberDuplicates, similarity, *row, submission . created , tableStrSimilarity));
-        } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for report
+        } else if (removeComment.empty()) { // If the submission doesn't fit the criterias for removal, check criterias for reports
             strhash = (*row).get(DB_8PXHASH).get<std::string>();
             mpzhash.set_str(strhash, 10);
             similarity = image.compareHash8x8( mpzhash );
@@ -112,7 +112,7 @@ void process_image(Image &image, const std::string &url, int threadNumber) {
         throw std::runtime_error("Invalid image format on " + url);
     }
 
-    image.matrix = imread(Image::determine_image_name(threadNumber));
+    image.matrix = imread(Image::determine_image_name(threadNumber)); // TODO : If the matrix is empty, throw exception before extract_text
     image . extract_text(threadNumber);
 
     image.computeHash8x8();
@@ -261,7 +261,6 @@ void insert_submission(const Submission &submission, Image &image, bool isMedia,
 }
 
 void process_submission(bool *finished, std::set<std::string> *sub2thread, std::set<std::string> *requiredOrder, const Submission &submission, const SubredditSetting &settings, int threadNumber) {
-    //sleep(10);
     try {
         interfaces[threadNumber]->save_submission( submission . subreddit, submission . id );
 
@@ -350,7 +349,7 @@ void populate_list(std::list<Submission> &submissionList, json &submissionJSON) 
 
         } catch ( std::exception &e )
         {
-            std::cerr << "EXCEPTION ON LIST-BUILDING:" << e.what() << std::endl;
+            std::cerr << "EXCEPTION ON LIST-BUILDING:" << e.what() << " : " << submissionIter . value()[ "data" ] << std::endl;
         }
     }
 }
@@ -433,6 +432,7 @@ void iterate_submissions() {
     for (int i = 0; i < NUMBER_THREADS; i++) {
         if (alreadyCalled[i]) {
             benchmarkThreads[i]->join();
+            delete benchmarkThreads[i];
             std::cout << "Joined " << i << std::endl; // TODO: REMOVE
         }
     }

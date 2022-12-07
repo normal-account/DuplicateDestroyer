@@ -54,7 +54,7 @@ void initialize_tesseract()
             exit(1);
         }
 
-        // Or PSM_AUTO_OSD for extra info (OSD). Difference not significant.
+        // Or PSM_AUTO_OSD for extra info (OSD). Difference not significant.//
         // See : https://pyimagesearch.com/2021/11/15/tesseract-page-segmentation-modes-psms-explained-how-to-improve-your-ocr-accuracy/
         i->SetVariable("debug_file", "/dev/null");
         i->SetPageSegMode( tesseract::PSM_AUTO);   //matches -psm 1 from the command line
@@ -82,9 +82,9 @@ int main()
     int count = 0;
     initialize_tesseract();
     initialize_db_instances();
-    atexit(( destroy_instances ));
+    //atexit(destroy_instances);
 
-    while (true) {
+    while (count < 450) {
         try {
             if (apiWrapper.get_time_expire() - get_unix_time() < 10000 || apiWrapper.get_time_expire() == 0)
                 initialize_token();
@@ -96,6 +96,7 @@ int main()
             for (int i = 0; i < benchmarkThreads.size(); i++) {
                 if (benchmarkThreads[i] != nullptr && benchmarkThreads[i]->joinable()) {
                     benchmarkThreads[i]->join();
+                    delete benchmarkThreads[i];
                     std::cout << "Joined on exception" << i << std::endl; // TODO: REMOVE
                 }
             }
@@ -105,4 +106,7 @@ int main()
         std::cout << count++ << std::endl;
         sleep(/*calculate_sleep()*/10);
     }
+    sleep(100);
+    destroy_instances();
+    sleep(9999999);
 }

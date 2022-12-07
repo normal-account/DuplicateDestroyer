@@ -44,15 +44,16 @@ Submission::Submission( json data )
     }
 }
 
+// TODO: Convert strings to array in string_constants and iterate over it
 bool Submission::is_image() const
 {
-
     return (url.ends_with(".jpg") || url.ends_with(".jpg?1") || url.ends_with(".png") || url.ends_with("png?1")
             || url.ends_with(".jpeg") || url.find("reddituploads.com") != std::string::npos || url.find("reutersmedia.net") != std::string::npos
             || url.find("500px.org") != std::string::npos || url.find("redditmedia.com") != std::string::npos
     );
 }
 
+// TODO: Convert strings to array in string_constants and iterate over it
 bool Submission::is_video() const
 {
     return (url.ends_with(".gif") || url.ends_with(".mp4") || url.ends_with(".gifv") || url.find("v.redd.it") != std::string::npos
