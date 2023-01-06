@@ -106,7 +106,5 @@ int main()
         std::cout << count++ << std::endl;
         sleep(/*calculate_sleep()*/10);
     }
-    sleep(100);
     destroy_instances();
-    sleep(9999999);
 }
