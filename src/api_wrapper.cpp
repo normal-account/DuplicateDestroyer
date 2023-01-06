@@ -144,11 +144,11 @@ bool ApiWrapper::image_deleted( const std::string &url )
 cpr::Response ApiWrapper::fetch_token() const
 {
     auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                           cpr::Authentication{"7FqDgsrKsu5IYL5N53ZVZg", "pP2bDfRkr_vGaAhBfYE-CyzuLt2Tlw",cpr::AuthMode::BASIC
+                           cpr::Authentication{"KEY_ID_HWEW", "KEY_SECRET_HERE",cpr::AuthMode::BASIC
                            },
                            cpr::Parameters{{"grant_type", "password"},
-                                           {"username",   "dd_testing_account"},
-                                           {"password",   "soleil100"},
+                                           {"username",   "USERNAME_HERE"},
+                                           {"password",   "PASSWORD_HERE"},
                            },
                            cpr::VerifySsl( 0 ),
                            cpr::UserAgent( USER_AGENT ));
