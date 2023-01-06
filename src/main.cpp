@@ -67,6 +67,24 @@ void initialize_db_instances() {
     }
 }
 
+std::string get_env_var( std::string const & key )
+{
+    char * val = getenv( key.c_str() );
+    if (val == nullptr) {
+        std::cerr << "ERROR : Env var " << key << " is undefined." << std::endl;
+        exit(-1);
+    }
+    return std::string(val);
+}
+
+void set_bot_creds() {
+    std::string username = get_env_var("DD_USERNAME");
+    std::string password = get_env_var("DD_PASSWORD");
+    std::string key_id = get_env_var("DD_KEY_ID");
+    std::string key_secret = get_env_var("DD_KEY_SECRET");
+    apiWrapper . set_creds( username, password, key_id, key_secret );
+}
+
 // Adjust sleep in function of new submissions. Don't want to waste our API requests when there are few submissions.
 unsigned calculate_sleep() {
     auto substract = (unsigned)( interfaces[NUMBER_THREADS]->get_new_submissions() * (0.3));
@@ -82,7 +100,7 @@ int main()
     int count = 0;
     initialize_tesseract();
     initialize_db_instances();
-    //atexit(destroy_instances);
+    set_bot_creds();
 
     while (count < 450) {
         try {

@@ -4,13 +4,18 @@
 #ifndef DUPLICATEDESTROYER_API_WRAPPER_H
 #define DUPLICATEDESTROYER_API_WRAPPER_H
 #define USER_AGENT "Linux:DuplicateDestroyer:v2.0 C++ (by /u/PowerModerator)"
-//#define IMAGE_NAME "image_in_process"
 
 class ApiWrapper
 {
    int NUMBER_THREADS;
    std::shared_ptr<cpr::Session> *sessions;
    std::string token;
+
+   std::string username;
+   std::string password;
+   std::string key_id;
+   std::string key_secret;
+
    unsigned long long timeToExpire = 0;
 
 public:
@@ -36,6 +41,8 @@ public:
    cpr::Response fetch_token() const;
 
    void set_token( const std::string &newToken );
+
+   void set_creds( const std::string &username, const std::string &password, const std::string &key_id, const std::string &key_secret);
 
    void set_time_expire ( unsigned long long unixTime );
 

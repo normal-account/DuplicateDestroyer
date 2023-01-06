@@ -144,11 +144,11 @@ bool ApiWrapper::image_deleted( const std::string &url )
 cpr::Response ApiWrapper::fetch_token() const
 {
     auto query = cpr::Post(cpr::Url{"https://www.reddit.com/api/v1/access_token"},
-                           cpr::Authentication{"KEY_ID_HWEW", "KEY_SECRET_HERE",cpr::AuthMode::BASIC
+                           cpr::Authentication{key_id, key_secret,cpr::AuthMode::BASIC
                            },
                            cpr::Parameters{{"grant_type", "password"},
-                                           {"username",   "USERNAME_HERE"},
-                                           {"password",   "PASSWORD_HERE"},
+                                           {"username",   username},
+                                           {"password",     password},
                            },
                            cpr::VerifySsl( 0 ),
                            cpr::UserAgent( USER_AGENT ));
@@ -187,6 +187,14 @@ void ApiWrapper::set_time_expire( unsigned long long unixTime )
 unsigned long long ApiWrapper::get_time_expire() const
 {
     return timeToExpire;
+}
+
+void ApiWrapper::set_creds( const std::string &username, const std::string &password, const std::string &key_id, const std::string &key_secret)
+{
+    this->username = username;
+    this->password = password;
+    this->key_id = key_id;
+    this->key_secret = key_secret;
 }
 
 
