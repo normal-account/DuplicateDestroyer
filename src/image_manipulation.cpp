@@ -49,7 +49,7 @@ void Image::computeHash8x8()
 
     uchar pixel, previousPixel = matrix8px . at<uchar>( 7, 0 );
 
-    for ( int row = 0; row < 5; row += 2 ) // Previously 8
+    for ( int row = 0; row < 8; row += 2 )
     {
         for ( int col = 0; col < 8; col++ )
         {
