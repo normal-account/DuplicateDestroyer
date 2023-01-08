@@ -14,7 +14,7 @@ void Image::computeHash10x10()
 
     uchar pixel, previousPixel = matrix10px . at<uchar>( 9, 0 );
 
-    for ( int row = 0; row < 10; row += 2 )
+    for ( int row = 0; row < 10; row++ )
     {
         for ( int col = 0; col < 10; col++ )
         {
@@ -49,7 +49,7 @@ void Image::computeHash8x8()
 
     uchar pixel, previousPixel = matrix8px . at<uchar>( 7, 0 );
 
-    for ( int row = 0; row < 8; row += 2 )
+    for ( int row = 0; row < 8; row++)
     {
         for ( int col = 0; col < 8; col++ )
         {
