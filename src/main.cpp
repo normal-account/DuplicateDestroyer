@@ -21,7 +21,6 @@ unsigned long long get_unix_time() {
 // Should be done only once the original token expires.
 void initialize_token()
 {
-    //std::cout << apiWrapper.image_deleted("https://i.redd.it/hdosxpjm4iz91.png") << std::endl;
     cpr::Response tokenQuery = apiWrapper.fetch_token();
     json jsonToken = json::parse( tokenQuery . text );
     std::string ogToken = "bearer ";
@@ -111,18 +110,17 @@ int main()
             iterate_submissions();
         } catch (std::exception &e) { // Something went horribly wrong !
             // Make sure that all threads are joined correctly
-            for (int i = 0; i < benchmarkThreads.size(); i++) {
-                if (benchmarkThreads[i] != nullptr && benchmarkThreads[i]->joinable()) {
-                    benchmarkThreads[i]->join();
-                    delete benchmarkThreads[i];
-                    std::cout << "Joined on exception" << i << std::endl; // TODO: REMOVE
+            for (auto & benchmarkThread : benchmarkThreads) {
+                if (benchmarkThread != nullptr && benchmarkThread->joinable()) {
+                    benchmarkThread->join();
+                    delete benchmarkThread;
                 }
             }
             setMutex.unlock(); // Unlock a possibly locked mutex to prevent infinite loops
             std::cerr << "EXCEPTION : " << e.what() << std::endl;
         }
         std::cout << count++ << std::endl;
-        sleep(/*calculate_sleep()*/10);
+        sleep(/*calculate_sleep()*/10); // TODO : Uncomment method
     }
     destroy_instances();
 }
