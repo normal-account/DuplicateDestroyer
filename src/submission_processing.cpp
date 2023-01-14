@@ -125,7 +125,7 @@ bool handle_image(const Submission &submission, const SubredditSetting &settings
     process_image(image, url, threadNumber);
 
     // If the image is completely uniform (e.g. only contains 1 color), then we don't even want to process it nor add it to the DB.
-    if (image.getHash8x8().get_str() == "4294967295" || image.getHash10x10().get_str() == "1208925819614629174706175")
+    if (image.getHash8x8().get_str() == "3069585302236515101")
         return true;
 
     bool submissionRemoved = search_image_duplicates( submission, settings, image, threadNumber);
