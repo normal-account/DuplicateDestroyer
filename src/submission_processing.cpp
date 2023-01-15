@@ -68,6 +68,9 @@ bool search_image_duplicates( const Submission &submission, const SubredditSetti
         if (get_days_interval((*row).get(DB_DATE).get<u_long>(), submission.created) > settings.time_range)
             continue;
 
+        if ((*row).get(DB_8PXHASH).get<std::string>() == "3069585302236515101")
+            continue;
+
         std::string ocrSTR = (*row).get(DB_OCRSTRING).get<std::string>();
 
         int strSimilarity = (int)get_string_similarity(ocrSTR, imageOcrString);
