@@ -12,7 +12,7 @@ find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} /usr/local/mysql/connector-c++-8.0.31/include/ )
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG "-O3")
 
 add_executable(DuplicateDestroyer src/db_interface.cpp src/main.cpp src/api_wrapper.cpp src/reddit_entities.cpp
         src/image_manipulation.cpp src/comment_formatting.cpp src/submission_processing.cpp src/message_processing.cpp)
