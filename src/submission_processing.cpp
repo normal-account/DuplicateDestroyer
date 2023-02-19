@@ -16,15 +16,15 @@ std::string submit_comment(const std::string &content, const std::string &fullna
 
 // Returns true if the described submission fits the criteria for removal
 bool determine_remove(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
-    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 75)
-           || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 50)
+    return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 70 && imageSimilarity > 65)
            || (textSimilarity > 60 && imageSimilarity >= imageThreshold)
            || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
 
 // Returns true if the described submission fits the criteria for reporting
 bool determine_report(int imageSimilarity, int imageThreshold, double textSimilarity, int textLength1, int textLength2) {
-    return (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
+    return (textLength1 > 35 && textLength2 > 35 && textSimilarity > 75)
+           || (textLength1 > 5 && textLength2 > 5 && textSimilarity > 65 && imageSimilarity > 75)
            || (textSimilarity > 60 && imageSimilarity >= imageThreshold)
            || (textLength1 < 5 && textLength2 < 5 && imageSimilarity >= imageThreshold);
 }
