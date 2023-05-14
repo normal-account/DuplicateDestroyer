@@ -278,8 +278,10 @@ void process_submission(bool *finished, std::set<std::string> *sub2thread, std::
         {
             if ( submission . isGallery )
             {
-                for ( const auto &url : submission . galleryUrls )
+                for ( const auto &url : submission . galleryUrls ) {
+                    if (submissionRemoved) break;
                     submissionRemoved = handle_image( submission, settings, image, url, threadNumber );
+                }
             } else
                 submissionRemoved = handle_image( submission, settings, image, submission . url, threadNumber);
         } // 2 - submission is a link
